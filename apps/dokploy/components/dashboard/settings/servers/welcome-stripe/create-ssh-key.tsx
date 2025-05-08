@@ -32,7 +32,7 @@ export const CreateSSHKey = () => {
 				});
 				await mutateAsync({
 					name: "dokploy-cloud-ssh-key",
-					description: "Used on Dokploy Cloud",
+					description: "Used on UnieVerse™ Cloud",
 					privateKey: keys.privateKey,
 					publicKey: keys.publicKey,
 					organizationId: "",
@@ -135,13 +135,14 @@ export const CreateSSHKey = () => {
 											</div>
 										</div>
 									</div>
-									<Link
+									{/* UnieAI */}
+									{/* <Link
 										href="https://docs.dokploy.com/docs/core/multi-server/instructions#requirements"
 										target="_blank"
 										className="text-primary flex flex-row gap-2"
 									>
 										View Tutorial <ExternalLinkIcon className="size-4" />
-									</Link>
+									</Link> */}
 								</div>
 							</div>
 						</>

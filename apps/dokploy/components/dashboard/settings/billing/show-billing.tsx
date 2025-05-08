@@ -119,7 +119,7 @@ export const ShowBilling = () => {
 									)}
 								</div>
 							)}
-							<div className="flex flex-col gap-1.5 mt-4">
+							{/* <div className="flex flex-col gap-1.5 mt-4">
 								<span className="text-base text-primary">
 									Need Help? We are here to help you.
 								</span>
@@ -129,7 +129,7 @@ export const ShowBilling = () => {
 								<Button className="rounded-full bg-[#5965F2] hover:bg-[#4A55E0] w-fit">
 									<Link
 										href="https://discord.gg/2tBnJ3jDJc"
-										aria-label="Dokploy on GitHub"
+										aria-label="UnieVerse™ on GitHub"
 										target="_blank"
 										className="flex flex-row items-center gap-2 text-white"
 									>
@@ -144,7 +144,7 @@ export const ShowBilling = () => {
 										Join Discord
 									</Link>
 								</Button>
-							</div>
+							</div> */}
 							{isLoading ? (
 								<span className="text-base text-muted-foreground flex flex-row gap-3 items-center justify-center min-h-[10vh]">
 									Loading...
@@ -216,11 +216,11 @@ export const ShowBilling = () => {
 														)}
 													>
 														{[
-															"All the features of Dokploy",
+															"All the features of UnieVerse™",
 															"Unlimited deployments",
 															"Self-hosted on your own infrastructure",
 															"Full access to all deployment features",
-															"Dokploy integration",
+															"UnieVerse™ integration",
 															"Backups",
 															"All Incoming features",
 														].map((feature) => (

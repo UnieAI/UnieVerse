@@ -93,7 +93,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendSlackNotification(input, {
 					channel: input.channel,
-					text: "Hi, From Dokploy 👋",
+					text: "Hi, From UnieVerse™ 👋",
 				});
 				return true;
 			} catch (error) {
@@ -148,7 +148,7 @@ export const notificationRouter = createTRPCRouter({
 		.input(apiTestTelegramConnection)
 		.mutation(async ({ input }) => {
 			try {
-				await sendTelegramNotification(input, "Hi, From Dokploy 👋");
+				await sendTelegramNotification(input, "Hi, From UnieVerse™ 👋");
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -208,7 +208,7 @@ export const notificationRouter = createTRPCRouter({
 
 				await sendDiscordNotification(input, {
 					title: decorate(">", "`🤚` - Test Notification"),
-					description: decorate(">", "Hi, From Dokploy 👋"),
+					description: decorate(">", "Hi, From UnieVerse™ 👋"),
 					color: 0xf3f7f4,
 				});
 
@@ -267,7 +267,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendEmailNotification(
 					input,
 					"Test Email",
-					"<p>Hi, From Dokploy 👋</p>",
+					"<p>Hi, From UnieVerse™ 👋</p>",
 				);
 				return true;
 			} catch (error) {
@@ -329,7 +329,7 @@ export const notificationRouter = createTRPCRouter({
 	receiveNotification: publicProcedure
 		.input(
 			z.object({
-				ServerType: z.enum(["Dokploy", "Remote"]).default("Dokploy"),
+				ServerType: z.enum(["UnieVerse", "Remote"]).default("UnieVerse"),
 				Type: z.enum(["Memory", "CPU"]),
 				Value: z.number(),
 				Threshold: z.number(),
@@ -342,7 +342,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				let organizationId = "";
 				let ServerName = "";
-				if (input.ServerType === "Dokploy") {
+				if (input.ServerType === "UnieVerse") {
 					const result = await db
 						.select()
 						.from(users_temp)
@@ -358,7 +358,7 @@ export const notificationRouter = createTRPCRouter({
 					}
 
 					organizationId = result?.[0]?.id;
-					ServerName = "Dokploy";
+					ServerName = "UnieVerse";
 				} else {
 					const result = await db
 						.select()
@@ -435,7 +435,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendGotifyNotification(
 					input,
 					"Test Notification",
-					"Hi, From Dokploy 👋",
+					"Hi, From UnieVerse™ 👋",
 				);
 				return true;
 			} catch (error) {

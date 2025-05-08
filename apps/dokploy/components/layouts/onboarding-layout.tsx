@@ -14,17 +14,16 @@ export const OnboardingLayout = ({ children }: Props) => {
 			<div className="relative hidden h-full flex-col  p-10 text-primary dark:border-r lg:flex">
 				<div className="absolute inset-0 bg-muted" />
 				<Link
-					href="https://dokploy.com"
+					href="https://unieai.com"
 					className="relative z-20 flex items-center text-lg font-medium gap-4  text-primary"
 				>
 					<Logo className="size-10" />
-					Dokploy
+					UnieVerse™
 				</Link>
 				<div className="relative z-20 mt-auto">
 					<blockquote className="space-y-2">
 						<p className="text-lg text-primary">
-							&ldquo;The Open Source alternative to Netlify, Vercel,
-							Heroku.&rdquo;
+							&ldquo; From LLM serving to APP deploy to deliver. The End-to-end platform for the full generative AI solution lifecycle.&rdquo;
 						</p>
 					</blockquote>
 				</div>
@@ -40,7 +39,7 @@ export const OnboardingLayout = ({ children }: Props) => {
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://x.com/getdokploy">
+						<Link href="https://x.com/UnieAI138958">
 							<svg
 								stroke="currentColor"
 								fill="currentColor"
@@ -54,7 +53,8 @@ export const OnboardingLayout = ({ children }: Props) => {
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://discord.com/invite/2tBnJ3jDJc">
+						{/* UnieAI */}
+						<Link href=""> 
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 48 48"

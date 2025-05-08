@@ -78,10 +78,10 @@ export const WelcomeSuscription = () => {
 
 				<DialogHeader>
 					<DialogTitle className="text-2xl text-center">
-						Welcome To Dokploy Cloud 🎉
+						Welcome To UnieVerse™ Cloud 🎉
 					</DialogTitle>
 					<DialogDescription className="text-center max-w-xl mx-auto">
-						Thank you for choosing Dokploy Cloud! 🚀 We're excited to have you
+						Thank you for choosing UnieVerse™ Cloud! 🚀 We're excited to have you
 						onboard. Before you dive in, you'll need to configure your remote
 						server to unlock all the features we offer.
 					</DialogDescription>
@@ -286,7 +286,7 @@ export const WelcomeSuscription = () => {
 												that your server can handle?
 											</p>
 											<p className="text-muted-foreground">
-												Here are some of the things you can do with Dokploy
+												Here are some of the things you can do with UnieVerse™
 												Cloud:
 											</p>
 										</div>
@@ -318,8 +318,8 @@ export const WelcomeSuscription = () => {
 											<div className="flex flex-row gap-4">
 												<Button className="rounded-full bg-[#5965F2] hover:bg-[#4A55E0] w-fit">
 													<Link
-														href="https://discord.gg/2tBnJ3jDJc"
-														aria-label="Dokploy on GitHub"
+														href=""
+														aria-label="UnieVerse™ on Discord"
 														target="_blank"
 														className="flex flex-row items-center gap-2 text-white"
 													>
@@ -336,8 +336,8 @@ export const WelcomeSuscription = () => {
 												</Button>
 												<Button className="rounded-full  w-fit">
 													<Link
-														href="https://github.com/Dokploy/dokploy"
-														aria-label="Dokploy on GitHub"
+														href="https://github.com/unieai"
+														aria-label="UnieAI on GitHub"
 														target="_blank"
 														className="flex flex-row items-center gap-2 "
 													>
@@ -345,8 +345,8 @@ export const WelcomeSuscription = () => {
 														Github
 													</Link>
 												</Button>
-
-												<Button
+												{/* UnieAI */}
+												{/* <Button
 													className="rounded-full  w-fit"
 													variant="outline"
 												>
@@ -359,7 +359,7 @@ export const WelcomeSuscription = () => {
 														<BookIcon size={16} />
 														Docs
 													</Link>
-												</Button>
+												</Button> */}
 											</div>
 										</div>
 									</div>

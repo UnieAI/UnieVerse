@@ -512,8 +512,8 @@ export const settingsRouter = createTRPCRouter({
 			});
 
 			openApiDocument.info = {
-				title: "Dokploy API",
-				description: "Endpoints for dokploy",
+				title: "UnieVerse API",
+				description: "Endpoints for UnieVerse™",
 				version: "1.0.0",
 			};
 

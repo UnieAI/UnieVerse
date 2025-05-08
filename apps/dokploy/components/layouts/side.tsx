@@ -1004,7 +1004,8 @@ export default function Page({ children }: Props) {
 							})}
 						</SidebarMenu>
 					</SidebarGroup>
-					<SidebarGroup className="group-data-[collapsible=icon]:hidden">
+					{/* UnieAI */}
+					{/* <SidebarGroup className="group-data-[collapsible=icon]:hidden">
 						<SidebarGroupLabel>Extra</SidebarGroupLabel>
 						<SidebarMenu>
 							{help.map((item: ExternalLink) => (
@@ -1025,7 +1026,7 @@ export default function Page({ children }: Props) {
 								</SidebarMenuItem>
 							))}
 						</SidebarMenu>
-					</SidebarGroup>
+					</SidebarGroup> */}
 				</SidebarContent>
 				<SidebarFooter>
 					<SidebarMenu className="flex flex-col gap-2">
@@ -1037,7 +1038,8 @@ export default function Page({ children }: Props) {
 						<SidebarMenuItem>
 							<UserNav />
 						</SidebarMenuItem>
-						{dokployVersion && (
+						{/* UnieAI */}
+						{/* {dokployVersion && (
 							<>
 								<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
 									Version {dokployVersion}
@@ -1046,7 +1048,7 @@ export default function Page({ children }: Props) {
 									{dokployVersion}
 								</div>
 							</>
-						)}
+						)} */}
 					</SidebarMenu>
 				</SidebarFooter>
 				<SidebarRail />

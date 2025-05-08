@@ -28,7 +28,7 @@ export const AddGithubProvider = () => {
 		const manifest = JSON.stringify(
 			{
 				redirect_url: `${origin}/api/providers/github/setup?organizationId=${activeOrganization?.id}`,
-				name: `Dokploy-${format(new Date(), "yyyy-MM-dd")}`,
+				name: `UnieVerse-${format(new Date(), "yyyy-MM-dd")}`,
 				url: origin,
 				hook_attributes: {
 					url: `${url}/api/deploy/github`,

@@ -145,7 +145,7 @@ export const UpdateServer = ({
 				{!hasCheckedUpdate && (
 					<div className="mb-8">
 						<p className="text text-muted-foreground">
-							Check for new releases and update Dokploy.
+							Check for new releases and update UnieVerse™.
 							<br />
 							<br />
 							We recommend checking for updates regularly to ensure you have the
@@ -230,7 +230,9 @@ export const UpdateServer = ({
 					</div>
 				)}
 
-				{isUpdateAvailable && (
+				{/* UnieAI */}
+
+				{/* {isUpdateAvailable && (
 					<div className="rounded-lg bg-[#16254D] p-4 mb-8">
 						<div className="flex gap-2">
 							<Info className="h-5 w-5 flex-shrink-0 text-[#5B9DFF]" />
@@ -247,7 +249,7 @@ export const UpdateServer = ({
 							</div>
 						</div>
 					</div>
-				)}
+				)} */}
 
 				<div className="flex items-center justify-between pt-2">
 					<ToggleAutoCheckUpdates disabled={isLoading} />
