@@ -12,9 +12,8 @@ import {
 } from "@/components/icons/data-tools-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button"
 import { api } from "@/utils/api";
-import { BookTextIcon, GitBranch, Loader2, UploadCloud } from "lucide-react";
+import { GitBranch, Loader2, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { SaveBitbucketProvider } from "./save-bitbucket-provider";
