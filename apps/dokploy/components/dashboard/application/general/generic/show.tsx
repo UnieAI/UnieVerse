@@ -12,8 +12,9 @@ import {
 } from "@/components/icons/data-tools-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button"
 import { api } from "@/utils/api";
-import { GitBranch, Loader2, UploadCloud } from "lucide-react";
+import { BookTextIcon, GitBranch, Loader2, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { SaveBitbucketProvider } from "./save-bitbucket-provider";
@@ -44,7 +45,8 @@ export const ShowProviderForm = ({ applicationId }: Props) => {
 		api.gitea.giteaProviders.useQuery();
 
 	const { data: application } = api.application.one.useQuery({ applicationId });
-	const [tab, setSab] = useState<TabState>(application?.sourceType || "github");
+	const [tab, setSab] = useState<TabState>(application?.sourceType || "docker");
+	const [isOpenTabs, setIsOpenTabs] = useState<boolean>(false);
 
 	const isLoading =
 		isLoadingGithub || isLoadingGitlab || isLoadingBitbucket || isLoadingGitea;
@@ -101,57 +103,76 @@ export const ShowProviderForm = ({ applicationId }: Props) => {
 					}}
 				>
 					<div className="flex flex-row items-center justify-between w-full gap-4">
-						<TabsList className="md:grid md:w-fit md:grid-cols-7 max-md:overflow-x-scroll justify-start bg-transparent overflow-y-hidden">
-							<TabsTrigger
-								value="github"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<GithubIcon className="size-4 text-current fill-current" />
-								Github
-							</TabsTrigger>
-							<TabsTrigger
-								value="gitlab"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<GitlabIcon className="size-4 text-current fill-current" />
-								Gitlab
-							</TabsTrigger>
-							<TabsTrigger
-								value="bitbucket"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<BitbucketIcon className="size-4 text-current fill-current" />
-								Bitbucket
-							</TabsTrigger>
-							<TabsTrigger
-								value="gitea"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<GiteaIcon className="size-4 text-current fill-current" />
-								Gitea
-							</TabsTrigger>
-							<TabsTrigger
-								value="docker"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<DockerIcon className="size-5 text-current" />
-								Docker
-							</TabsTrigger>
-							<TabsTrigger
-								value="git"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<GitIcon />
-								Git
-							</TabsTrigger>
-							<TabsTrigger
-								value="drop"
-								className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
-							>
-								<UploadCloud className="size-5 text-current" />
-								Drop
-							</TabsTrigger>
-						</TabsList>
+						{isOpenTabs ? (
+							<TabsList className="md:grid md:w-fit md:grid-cols-7 max-md:overflow-x-scroll justify-start bg-transparent overflow-y-hidden">
+								<TabsTrigger
+									value="docker"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<DockerIcon className="size-5 text-current" />
+									Docker
+								</TabsTrigger>
+								<TabsTrigger
+									value="github"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<GithubIcon className="size-4 text-current fill-current" />
+									Github
+								</TabsTrigger>
+								<TabsTrigger
+									value="gitlab"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<GitlabIcon className="size-4 text-current fill-current" />
+									Gitlab
+								</TabsTrigger>
+								<TabsTrigger
+									value="bitbucket"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<BitbucketIcon className="size-4 text-current fill-current" />
+									Bitbucket
+								</TabsTrigger>
+								<TabsTrigger
+									value="gitea"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<GiteaIcon className="size-4 text-current fill-current" />
+									Gitea
+								</TabsTrigger>
+								<TabsTrigger
+									value="git"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<GitIcon />
+									Git
+								</TabsTrigger>
+								<TabsTrigger
+									value="drop"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<UploadCloud className="size-5 text-current" />
+									Drop
+								</TabsTrigger>
+							</TabsList>
+						) : (
+							<TabsList className="md:grid md:w-fit md:grid-cols-7 max-md:overflow-x-scroll justify-start bg-transparent overflow-y-hidden">
+								<TabsTrigger
+									value="docker"
+									className="rounded-none border-b-2 gap-2 border-b-transparent data-[state=active]:border-b-2 data-[state=active]:border-b-border"
+								>
+									<DockerIcon className="size-5 text-current" />
+									Docker
+								</TabsTrigger>
+								<button
+									className="rounded-none border-b-2 gap-2 border-b-transparent"
+									onClick={() => setIsOpenTabs(true)}
+								>
+									...
+								</button>
+							</TabsList>
+						)}
+
 					</div>
 
 					<TabsContent value="github" className="w-full p-2">
