@@ -46,13 +46,17 @@ const Page = () => {
     const [models, setModels] = useState<any>([]);
     const [model, setModel] = useState<string>("");
 
+    // 壓測數量
+    const [parallelCount, setParallelCount] = useState<number>(1);
+    const [parallelMessages, setParallelMessages] = useState<any>([]);
+
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isReplying, setIsReplying] = useState<boolean>(false);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const [message, setMessage] = useState<string>("");
-    const [messages, setMessages] = useState<any>([]);
+
     const [modelParams, setModelParams] = useState<ModelParams>({
         temperature: 0.6,
         max_tokens: 4096,
@@ -101,161 +105,144 @@ const Page = () => {
     }
 
     const handleSubmit = async () => {
-        if (!message.trim()) return;
-
-        if (!apiUrl || !apiToken) {
-            toast.error("Please enter both API URL and Token.");
+        if (!message.trim() || isLoading || isReplying || !apiUrl || !apiToken) {
+            toast.error("Invalid state or empty message.");
             return;
         }
-
-        if (isLoading || isReplying) {
-            toast.error(`Generating response, please wait...`);
-            return;
-        }
-
-        const newMessages = [
-            ...messages,
-            { role: "user", content: message },
-        ];
-
-        setMessages(newMessages);
-        setMessage("");
 
         setIsLoading(true);
         setIsReplying(true);
+        const toastId = toast.loading("Running parallel requests...");
 
-        const toastId = toast.loading(`Generating response...`);
+        // 初始化或更新每組對話紀錄
+        let baseUserMessage = { role: "user", content: message };
+        let baseAssistantLoading = { role: "assistant", content: "loading", loading: true };
 
-        // Add a temporary loading message
-        setMessages(prev => [...prev, { role: 'assistant', content: 'loading', loading: true }]);
+        let newParallelMessages: any = [];
 
-        try {
-            abortControllerRef.current = new AbortController();
-
-            const payload = JSON.stringify({
-                model: model,
-                messages: [
-                    { role: "system", content: modelParams.system_prompt },
-                    ...newMessages,
-                ],
-                max_tokens: modelParams.max_tokens,
-                temperature: modelParams.temperature,
-                top_p: modelParams.top_p,
-                top_k: modelParams.top_k,
-                presence_penalty: modelParams.presence_penalty,
-                frequency_penalty: modelParams.frequency_penalty,
-                echo: modelParams.echo,
-                stream: true,
-            });
-
-            // 流式處理邏輯
-            const url = `${apiUrl}/v1/chat/completions`;
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${apiToken}`,
-                },
-                body: payload,
-                signal: abortControllerRef.current.signal,
-            });
-
-            if (!response.body) {
-                throw new Error("No response body from streaming API");
-            }
-
-            const reader = response.body?.getReader();
-            let partialResponse = '';
-
-            if (reader) {
-
-                // Remove the temporary loading message
-                setMessages(prev => prev.slice(0, -1));
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        // Process any remaining response content
-                        if (partialResponse.trim()) {
-                            try {
-                                const lines = partialResponse.split('\n');
-                                const lastMessage = lines
-                                    .filter(line => line.startsWith('data: '))
-                                    .map(line => JSON.parse(line.slice(6)))
-                                    .pop();
-
-                                if (lastMessage?.choices?.[0]?.delta?.content) {
-                                    setMessages(prev => {
-                                        const lastMsg = prev[prev.length - 1];
-                                        if (lastMsg?.role === 'assistant') {
-                                            return [
-                                                ...prev.slice(0, -1),
-                                                { ...lastMsg, content: lastMsg.content + lastMessage.choices[0].delta.content },
-                                            ];
-                                        } else {
-                                            return [...prev, { role: 'assistant', content: lastMessage.choices[0].delta.content }];
-                                        }
-                                    });
-                                }
-                            } catch (e) {
-                                console.error('Error parsing final JSON:', e);
-                            }
-                        }
-                        break;
-                    }
-
-                    const chunk = new TextDecoder().decode(value);
-                    partialResponse += chunk;
-
-                    let lines = partialResponse.split('\n');
-                    // 只保留最後 incomplete 的那一行
-                    partialResponse = lines.pop() ?? "";
-
-                    lines = lines.filter(line => line.trim() !== '');
-
-                    for (const line of lines) {
-                        if (line === "data: [DONE]") {
-                            // "[DONE]" 是特殊結束符，忽略它
-                            // console.log("Stream finished.");
-                            continue;
-                        }
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const parsed = JSON.parse(line.slice(6));
-                                if (parsed.choices?.[0]?.delta?.content) {
-                                    const content = parsed.choices[0].delta.content;
-                                    setMessages(prev => {
-                                        const lastMsg = prev[prev.length - 1];
-                                        if (lastMsg?.role === 'assistant') {
-                                            return [
-                                                ...prev.slice(0, -1),
-                                                { ...lastMsg, content: lastMsg.content + content },
-                                            ];
-                                        } else {
-                                            return [...prev, { role: 'assistant', content }];
-                                        }
-                                    });
-                                }
-                            } catch (e) {
-                                console.error('Error parsing JSON:', e);
-                                console.error('Problematic line:', line);
-                            }
-                        } else {
-                            // console.warn('Ignored non-data line:', line);
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            // Remove the temporary loading message in case of error
-            setMessages(prev => prev.slice(0, -1));
-        } finally {
-            setIsLoading(false);
-            setIsReplying(false);
-            toast.dismiss(toastId);
-            abortControllerRef.current = null;
+        if (parallelMessages.length === 0) {
+            // 初始建立 N 組
+            newParallelMessages = Array.from({ length: parallelCount }, () => [
+                baseUserMessage,
+                baseAssistantLoading,
+            ]);
+        } else {
+            // 延續每組對話
+            newParallelMessages = parallelMessages.map(conv => [
+                ...conv,
+                baseUserMessage,
+                baseAssistantLoading,
+            ]);
         }
+
+        // ✅ 同步更新狀態
+        setParallelMessages(newParallelMessages);
+
+
+        // 並行處理每組 stream
+        await Promise.all(
+            Array.from({ length: parallelCount }).map(async (_, index) => {
+                try {
+                    const controller = new AbortController();
+
+                    // 取得過往訊息（去除 loading 和 system）
+                    const history = (newParallelMessages[index] || []).filter(
+                        (m: any) => m.role !== "system" && !m.loading
+                    );
+
+                    // 插入 system prompt（如果有）
+                    const messages = modelParams.system_prompt?.trim()
+                        ? [{ role: "system", content: modelParams.system_prompt }, ...history]
+                        : history;
+
+                    const payload = JSON.stringify({
+                        model,
+                        messages,
+                        ...modelParams,
+                        stream: true,
+                    });
+
+                    const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${apiToken}`,
+                        },
+                        body: payload,
+                        signal: controller.signal,
+                    });
+
+                    if (!response.body) throw new Error("No response stream");
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let partialContent = "";
+
+                    // 替換 loading，插入空 assistant response
+                    setParallelMessages(prev => {
+                        const newState = [...prev];
+                        const conv = [...newState[index]];
+                        conv[conv.length - 1] = { role: "assistant", content: "" };
+                        newState[index] = conv;
+                        return newState;
+                    });
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        partialContent += decoder.decode(value, { stream: true });
+                        const lines = partialContent.split("\n");
+                        partialContent = lines.pop() || "";
+
+                        for (const line of lines) {
+                            if (!line.trim() || line.trim() === "data: [DONE]") continue;
+                            if (line.startsWith("data: ")) {
+                                try {
+                                    const json = JSON.parse(line.slice(6));
+                                    const delta = json.choices?.[0]?.delta?.content;
+                                    if (delta) {
+                                        setParallelMessages(prev => {
+                                            const newState = [...prev];
+                                            const conv = [...newState[index]];
+                                            const last = conv[conv.length - 1];
+                                            if (last.role === "assistant") {
+                                                conv[conv.length - 1] = {
+                                                    ...last,
+                                                    content: last.content + delta
+                                                };
+                                                newState[index] = conv;
+                                            }
+                                            return newState;
+                                        });
+                                    }
+                                } catch (e) {
+                                    console.warn("Stream JSON parse error", e);
+                                }
+                            }
+                        }
+                    }
+
+                } catch (err) {
+                    console.error("Stream error", err);
+                    setParallelMessages(prev => {
+                        const newState = [...prev];
+                        const conv = [...newState[index]];
+                        conv[conv.length - 1] = {
+                            role: "assistant",
+                            content: "Error occurred during response."
+                        };
+                        newState[index] = conv;
+                        return newState;
+                    });
+                }
+            })
+        );
+
+        setIsLoading(false);
+        setIsReplying(false);
+        setMessage("");
+        toast.dismiss(toastId);
     };
 
     const stopReply = () => {
@@ -270,61 +257,21 @@ const Page = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-        setMessages([]);
+        setParallelMessages([]);
         setMessage('');
         setIsLoading(false);
         setIsReplying(false);
     };
 
-    const renderMessage = (msg: Message, index: number) => (
-        <div key={index} className={`p-4 ${msg.role === "user" ? "bg-zinc-100 dark:bg-zinc-800" : "bg-white dark:bg-zinc-900"} rounded-lg mb-4`}>
-            <div className="font-semibold mb-2">{msg.role === "user" ? "You" : "Assistant"}</div>
-            <div className="text-zinc-600 dark:text-zinc-300">{msg.content}</div>
-        </div>
-    );
-
     return (
         <div className="flex h-[90vh] gap-4 w-full overflow-hide">
             <div className=" w-full flex flex-col flex-1 border-r border-zinc-200 dark:border-zinc-800 p-4">
 
-                <div className="relative flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
-                    {/* {messages.map(renderMessage)} */}
-                    {messages.map((message, index) => (
-                        <motion.div
-                            key={index}
-                            className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            {message.role === 'assistant' && (
-                                <div className="border rounded-full h-8 w-8 flex items-center justify-center">
-                                    <UnieAISVG className='text-blue-500 h-6 w-6' />
-                                </div>
-                            )}
-                            <div
-                                className={`px-4 py-2 max-w-[80%]`}
-                                style={{
-                                    backgroundColor: message.role === 'user'
-                                        ? (document.documentElement.classList.contains('dark') ? '#52525b' : '#e4e4e7')
-                                        : '',
-                                    color: message.role === 'user'
-                                        ? ''
-                                        : 'white',
-                                    borderRadius: '0.5rem',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                }}
-                            >
-                                {(message.content === "loading" && message.loading) ? (
-                                    <div className='flex flex-row'>
-                                        <WaveLoading />
-                                    </div>
-                                ) : (
-                                    <RenderedResult content={message.content} />
-                                )}
-                            </div>
-                        </motion.div>
+                <div className="flex flex-1 flex-row">
+                    {parallelMessages.map((msgs, i) => (
+                        <div className="relative flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                            <MessageRender key={i} messages={msgs} />
+                        </div>
                     ))}
                 </div>
 
@@ -357,7 +304,7 @@ const Page = () => {
                 </div>
             </div>
 
-            { !isMobile && <div className="w-96 p-4 space-y-6 overflow-auto">
+            {!isMobile && <div className="w-96 p-4 space-y-6 overflow-auto">
 
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">options</h3>
@@ -404,6 +351,19 @@ const Page = () => {
                         ))}
                     </select>
                 </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm">Parallel Instances</label>
+                    <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={parallelCount}
+                        onChange={(e) => setParallelCount(Number(e.target.value))}
+                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                    />
+                </div>
+
 
                 <div className="space-y-4">
                     <div className="space-y-2">
@@ -566,6 +526,58 @@ export async function getServerSideProps(
             ...(await serverSideTranslations(locale, ["settings"])),
         },
     };
+}
+
+// --- Eric Components --- //
+
+interface MessageRenderProps {
+    messages: any;
+}
+
+const MessageRender = ({ messages }: MessageRenderProps) => {
+    return (
+        <>
+            {
+                messages.map((message, index) => (
+                    <motion.div
+                        key={index}
+                        className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                    >
+                        {message.role === 'assistant' && (
+                            <div className="border rounded-full h-8 w-8 flex items-center justify-center">
+                                <UnieAISVG className='text-blue-500 h-6 w-6' />
+                            </div>
+                        )}
+                        <div
+                            className={`px-4 py-2 max-w-[80%]`}
+                            style={{
+                                backgroundColor: message.role === 'user'
+                                    ? (document.documentElement.classList.contains('dark') ? '#52525b' : '#e4e4e7')
+                                    : '',
+                                color: message.role === 'user'
+                                    ? ''
+                                    : 'white',
+                                borderRadius: '0.5rem',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                            }}
+                        >
+                            {(message.content === "loading" && message.loading) ? (
+                                <div className='flex flex-row'>
+                                    <WaveLoading />
+                                </div>
+                            ) : (
+                                <RenderedResult content={message.content} />
+                            )}
+                        </div>
+                    </motion.div>
+                ))
+            }
+        </>
+    )
 }
 
 interface RenderedResultProp {
