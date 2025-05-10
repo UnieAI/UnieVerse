@@ -13,6 +13,7 @@ import { api } from "@/utils/api";
 import { BotIcon, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { HandleAi } from "./handle-ai";
+import { HandleLocalAi } from "./handle-local-ai";
 
 export const AiForm = () => {
 	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
@@ -46,7 +47,10 @@ export const AiForm = () => {
 										<span className="text-base text-muted-foreground text-center">
 											You don't have any AI configurations
 										</span>
-										<HandleAi />
+										<div className="flex gap-3">
+											<HandleAi />
+											<HandleLocalAi />
+										</div>
 									</div>
 								) : (
 									<div className="flex flex-col gap-4 rounded-lg min-h-[25vh]">

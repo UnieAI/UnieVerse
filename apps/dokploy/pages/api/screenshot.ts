@@ -13,7 +13,19 @@ function getLocalChromeExecutablePath(): string {
   if (platform === 'win32') {
     return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   }
-  return '/usr/bin/google-chrome'; // Linux 預設路徑
+  return '/usr/bin/google-chrome'; // Linux default
+}
+
+async function serveFallbackImage(res: NextApiResponse) {
+  try {
+    const fallbackPath = path.join(process.cwd(), 'public', 'default-web-screen-shot.gif');
+    const fallbackBuffer = await fs.readFile(fallbackPath);
+    res.setHeader('Content-Type', 'image/png');
+    res.status(200).end(fallbackBuffer);
+  } catch (fallbackError) {
+    console.error('[預設圖片讀取失敗]', fallbackError);
+    res.status(500).json({ error: '截圖與預設圖片皆失敗' });
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!url || !/^https?:\/\//.test(url)) {
-    return res.status(400).json({ error: '請提供有效網址' });
+    console.warn('[無效網址] 回傳預設圖片');
+    return await serveFallbackImage(res);
   }
 
   try {
@@ -34,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ignoreHTTPSErrors: true,
       defaultViewport: {
         width: 1280,
-        height: 720, // 16:9 比例
+        height: 720,
       },
     });
 
@@ -45,18 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await browser.close();
 
     res.setHeader('Content-Type', 'image/png');
-    return res.status(200).end(buffer);
+    res.status(200).end(buffer);
   } catch (error) {
     console.error('[截圖失敗，改用預設圖]', error);
-
-    try {
-      const fallbackPath = path.join(process.cwd(), 'public', 'default-web-screen.png');
-      const fallbackBuffer = await fs.readFile(fallbackPath);
-      res.setHeader('Content-Type', 'image/png');
-      return res.status(200).end(fallbackBuffer);
-    } catch (fallbackError) {
-      console.error('[預設圖片讀取失敗]', fallbackError);
-      return res.status(500).json({ error: '截圖與預設圖片皆失敗' });
-    }
+    return await serveFallbackImage(res);
   }
 }

@@ -35,6 +35,8 @@ export const compose = pgTable("compose", {
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
+	serviceScreenshot: text("serviceScreenshot"),
+	currentID: text("currentID"),
 	appName: text("appName")
 		.notNull()
 		.$defaultFn(() => generateAppName("compose")),

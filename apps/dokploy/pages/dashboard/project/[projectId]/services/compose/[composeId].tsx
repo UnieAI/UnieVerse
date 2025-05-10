@@ -90,6 +90,7 @@ const Service = (
 	const prevStatusRef = useRef<string | null>(null)
 	const hasMounted = useRef(false)
 
+
 	useEffect(() => {
 		const currentStatus = data?.composeStatus ?? null
 		const prevStatus = prevStatusRef.current

@@ -9,10 +9,13 @@ import {
 import { api } from "@/utils/api";
 import { ComposeActions } from "./actions";
 import { ShowProviderFormCompose } from "./generic/show";
+import AddAI from "./add-ai";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { ConsoleLogWriter } from "drizzle-orm";
+import { toast } from "sonner";
 interface Props {
 	composeId: string;
 }
@@ -37,6 +40,24 @@ function formatTimeAgo(createdAt: string | Date): string {
 	return parts.join(" ") + " ago";
 }
 
+const convertImageToBase64 = (url: string): Promise<string> => {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.crossOrigin = "anonymous";
+		img.onload = () => {
+			const canvas = document.createElement("canvas");
+			canvas.width = img.width;
+			canvas.height = img.height;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) return reject("Canvas context is null");
+			ctx.drawImage(img, 0, 0);
+			resolve(canvas.toDataURL("image/png"));
+		};
+		img.onerror = reject;
+		img.src = url;
+	});
+};
+
 const statusMap = {
 	idle: { label: "Idle", color: "bg-gray-400" },
 	running: { label: "Deploying", color: "bg-yellow-500" },
@@ -51,29 +72,67 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 			enabled: !!composeId,
 		},
 	);
+	const utils = api.useUtils();
+	const { mutateAsync, error, isError, isLoading } =
+		api.compose.update.useMutation();
 
 	const [isLoaded, setIsLoaded] = useState(false);
+	const [base64Image, setBase64Image] = useState<string | null>(null);
 
-	console.log(data, data?.domains[0]?.host)
+
+	// console.log(data, data?.domains[0]?.host, data?.deployments?.[data.deployments.length - 1]?.deploymentId)
 
 	const site = `http${data?.domains[0]?.https && 's'}://${data?.domains[0]?.host}`
 	// const site = "https://www.accton.com.tw/"
 	const screenshotUrl = `/api/screenshot?url=${encodeURIComponent(site)}`;
+
+	useEffect(() => {
+		if (isLoaded) {
+			console.log("save img", screenshotUrl)
+		}
+	}, [isLoaded])
+
+	useEffect(() => {
+		if (data?.composeStatus === 'done' && data?.currentID !== data?.deployments?.[data.deployments.length - 1]?.deploymentId) {
+			const updateDeployment = async () => {
+				try {
+					await mutateAsync({
+						currentID: data?.deployments?.[data.deployments.length - 1]?.deploymentId,
+						composeId: composeId,
+					});
+					toast.success("New version deploy successfully");
+					utils.compose.one.invalidate({ composeId });
+				} catch (error) {
+					toast.error("Error deploy the new version");
+				}
+			};
+
+			console.log("find new deployment");
+			updateDeployment();
+		}
+	}, [data?.composeStatus]);
 
 	return (
 		<>
 			<Card className="bg-background">
 				<CardHeader>
 					<div className="flex flex-row gap-2 justify-between flex-wrap">
-						<CardTitle className="text-xl flex items-start gap-5">
-							{data?.composeStatus === "done" ? (
-								`Service Overview`
-							) : (
-								`Deploy Settings`
-							)}
-							<Badge className="h-fit mt-1">
-								{data?.composeType === "docker-compose" ? "Compose" : "Stack"}
-							</Badge>
+						<CardTitle className="text-xl flex items-start gap-5 w-full">
+							<div className="flex justify-between w-full">
+								<div className="flex gap-5">
+									{data?.composeStatus === "done" ? (
+										`Service Overview`
+									) : (
+										`Deploy Settings`
+									)}
+									<Badge className="h-fit mt-1">
+										{data?.composeType === "docker-compose" ? "Compose" : "Stack"}
+									</Badge>
+								</div>
+								<div>
+									<AddAI />
+								</div>
+							</div>
 						</CardTitle>
 
 					</div>
@@ -107,34 +166,43 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 								/>
 							</div>
 							<div className=" mt-5 lg:w-2/5 w-full">
-								<div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-									<div className="flex flex-col">
-										<h1 className="opacity-50 mb-3">Time to Ready</h1>
+								<div className="grid grid-cols-2 lg:grid-cols-4 ">
+									<div className="flex flex-col ">
+										<h1 className="opacity-50 mb-3 ">Create time</h1>
 										<p>{formatTimeAgo(data?.createdAt)}</p>
 									</div>
-									<div className="flex flex-col">
+									<div className="flex flex-col ml-3">
 										<h1 className="opacity-50 mb-3">Status</h1>
 										<div className="flex items-center gap-2 text-sm">
 											<span className={`w-2.5 h-2.5 rounded-full ${data?.composeStatus ? statusMap[data?.composeStatus].color : null}`} />
 											<span>{data?.composeStatus ? statusMap[data?.composeStatus].label : null}</span>
 										</div>
 									</div>
+									<div className="flex flex-col lg:col-span-2">
+										<h1 className="opacity-50 mb-3">Deployment</h1>
+										<div className="flex items-center gap-2 text-sm">
+											<span className="line-clamp-1 break-all">
+												{data?.deployments?.[data.deployments.length - 1]?.deploymentId}
+											</span>
+										</div>
+									</div>
+
 								</div>
 								<div className="flex flex-col mt-10">
 									<div className="flex gap-3">
-									<h1 className="opacity-50 mb-3 ">Domain</h1>
+										<h1 className="opacity-50 mb-3 ">Domain</h1>
 									</div>
 									<div className="flex flex-col-reverse gap-3 ">
-									{data?.domains.map((item) => (
-										<Link
-											className="flex items-center gap-2 text-base font-medium hover:underline"
-											target="_blank"
-											href={`${item.https ? "https" : "http"}://${item.host}${item.path}`}
-										>
-											{item.host}
-											<ExternalLink className="size-4" />
-										</Link>
-									))}
+										{data?.domains.map((item) => (
+											<Link
+												className="flex items-center gap-2 text-base font-medium hover:underline"
+												target="_blank"
+												href={`${item.https ? "https" : "http"}://${item.host}${item.path}`}
+											>
+												{item.host}
+												<ExternalLink className="size-4" />
+											</Link>
+										))}
 									</div>
 								</div>
 							</div>
@@ -147,7 +215,7 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 					)}
 				</CardContent>
 			</Card>
-			
+
 			<ShowProviderFormCompose composeId={composeId} />
 		</>
 	);

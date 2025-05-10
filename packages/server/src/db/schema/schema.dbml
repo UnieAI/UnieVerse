@@ -263,7 +263,7 @@ table certificate {
 }
 
 
-
+table compose {
   composeId text [pk, not null]
   name text [not null]
   appName text [not null]

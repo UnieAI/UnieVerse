@@ -29,7 +29,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PenBoxIcon, PlusIcon } from "lucide-react";
+import { PenBoxIcon, Rabbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -49,7 +49,7 @@ interface Props {
 	aiId?: string;
 }
 
-export const HandleAi = ({ aiId }: Props) => {
+export const HandleLocalAi = ({ aiId }: Props) => {
 	const utils = api.useUtils();
 	const [error, setError] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
@@ -142,14 +142,14 @@ export const HandleAi = ({ aiId }: Props) => {
 					</Button>
 				) : (
 					<Button className="cursor-pointer space-x-3">
-						<PlusIcon className="h-4 w-4" />
-						Add AI API
+						<Rabbit className="h-4 w-4"/>
+						Deploy AI
 					</Button>
 				)}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>{aiId ? "Edit AI" : "Add AI"}</DialogTitle>
+					<DialogTitle>{aiId ? "Edit AI" : "Deploy AI"}</DialogTitle>
 					<DialogDescription>
 						Configure your AI provider settings
 					</DialogDescription>
