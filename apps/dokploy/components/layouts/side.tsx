@@ -33,6 +33,8 @@ import { usePathname } from "next/navigation";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 
+import { useTranslation } from "next-i18next";
+
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -143,11 +145,13 @@ type Menu = {
 // Consists of unfiltered home, settings, and help items
 // The items are filtered based on the user's role and permissions
 // The `isEnabled` function is called to determine if the item should be displayed
-const MENU: Menu = {
-	home: [
+function useMenu(): Menu {
+	// const { t } = useTranslation("settings");
+	return {
+		home: [
 		{
 			isSingle: true,
-			title: "Projects",
+			title: "Project",//t("settings.profile.project.title"),
 			url: "/dashboard/projects",
 			icon: Folder,
 		},
@@ -205,64 +209,7 @@ const MENU: Menu = {
 			// Only enabled for admins and users with access to Docker in non-cloud environments
 			isEnabled: ({ auth, isCloud }) =>
 				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
-		},
-
-		// Legacy unused menu, adjusted to the new structure
-		// {
-		// 	isSingle: true,
-		// 	title: "Projects",
-		// 	url: "/dashboard/projects",
-		// 	icon: Folder,
-		// },
-		// {
-		// 	isSingle: true,
-		// 	title: "Monitoring",
-		// 	icon: BarChartHorizontalBigIcon,
-		// 	url: "/dashboard/settings/monitoring",
-		// },
-		// {
-		//   isSingle: false,
-		//   title: "Settings",
-		//   icon: Settings2,
-		//   items: [
-		//     {
-		//       title: "Profile",
-		//       url: "/dashboard/settings/profile",
-		//     },
-		//     {
-		//       title: "Users",
-		//       url: "/dashboard/settings/users",
-		//     },
-		//     {
-		//       title: "SSH Key",
-		//       url: "/dashboard/settings/ssh-keys",
-		//     },
-		//     {
-		//       title: "Git",
-		//       url: "/dashboard/settings/git-providers",
-		//     },
-		//   ],
-		// },
-		// {
-		//   isSingle: false,
-		//   title: "Integrations",
-		//   icon: BlocksIcon,
-		//   items: [
-		//     {
-		//       title: "S3 Destinations",
-		//       url: "/dashboard/settings/destinations",
-		//     },
-		//     {
-		//       title: "Registry",
-		//       url: "/dashboard/settings/registry",
-		//     },
-		//     {
-		//       title: "Notifications",
-		//       url: "/dashboard/settings/notifications",
-		//     },
-		//   ],
-		// },
-	],
+		},],
 
 	settings: [
 		{
@@ -395,7 +342,261 @@ const MENU: Menu = {
 			),
 		},
 	],
-} as const;
+	}
+}
+// const MENU: Menu = {
+// 	home: [
+// 		{
+// 			isSingle: true,
+// 			title: t("sidebar.project.title"),
+// 			url: "/dashboard/projects",
+// 			icon: Folder,
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Monitoring",
+// 			url: "/dashboard/monitoring",
+// 			icon: BarChartHorizontalBigIcon,
+// 			// Only enabled in non-cloud environments
+// 			isEnabled: ({ isCloud }) => !isCloud,
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Schedules",
+// 			url: "/dashboard/schedules",
+// 			icon: Clock,
+// 			// Only enabled in non-cloud environments
+// 			isEnabled: ({ isCloud, auth }) => !isCloud && auth?.role === "owner",
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Traefik File System",
+// 			url: "/dashboard/traefik",
+// 			icon: GalleryVerticalEnd,
+// 			// Only enabled for admins and users with access to Traefik files in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) =>
+// 				!!(
+// 					(auth?.role === "owner" || auth?.canAccessToTraefikFiles) &&
+// 					!isCloud
+// 				),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Docker",
+// 			url: "/dashboard/docker",
+// 			icon: BlocksIcon,
+// 			// Only enabled for admins and users with access to Docker in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) =>
+// 				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Swarm",
+// 			url: "/dashboard/swarm",
+// 			icon: PieChart,
+// 			// Only enabled for admins and users with access to Docker in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) =>
+// 				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Requests",
+// 			url: "/dashboard/requests",
+// 			icon: Forward,
+// 			// Only enabled for admins and users with access to Docker in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) =>
+// 				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
+// 		},
+
+// 		// Legacy unused menu, adjusted to the new structure
+// 		// {
+// 		// 	isSingle: true,
+// 		// 	title: "Projects",
+// 		// 	url: "/dashboard/projects",
+// 		// 	icon: Folder,
+// 		// },
+// 		// {
+// 		// 	isSingle: true,
+// 		// 	title: "Monitoring",
+// 		// 	icon: BarChartHorizontalBigIcon,
+// 		// 	url: "/dashboard/settings/monitoring",
+// 		// },
+// 		// {
+// 		//   isSingle: false,
+// 		//   title: "Settings",
+// 		//   icon: Settings2,
+// 		//   items: [
+// 		//     {
+// 		//       title: "Profile",
+// 		//       url: "/dashboard/settings/profile",
+// 		//     },
+// 		//     {
+// 		//       title: "Users",
+// 		//       url: "/dashboard/settings/users",
+// 		//     },
+// 		//     {
+// 		//       title: "SSH Key",
+// 		//       url: "/dashboard/settings/ssh-keys",
+// 		//     },
+// 		//     {
+// 		//       title: "Git",
+// 		//       url: "/dashboard/settings/git-providers",
+// 		//     },
+// 		//   ],
+// 		// },
+// 		// {
+// 		//   isSingle: false,
+// 		//   title: "Integrations",
+// 		//   icon: BlocksIcon,
+// 		//   items: [
+// 		//     {
+// 		//       title: "S3 Destinations",
+// 		//       url: "/dashboard/settings/destinations",
+// 		//     },
+// 		//     {
+// 		//       title: "Registry",
+// 		//       url: "/dashboard/settings/registry",
+// 		//     },
+// 		//     {
+// 		//       title: "Notifications",
+// 		//       url: "/dashboard/settings/notifications",
+// 		//     },
+// 		//   ],
+// 		// },
+// 	],
+
+// 	settings: [
+// 		{
+// 			isSingle: true,
+// 			title: "Web Server",
+// 			url: "/dashboard/settings/server",
+// 			icon: Activity,
+// 			// Only enabled for admins in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Profile",
+// 			url: "/dashboard/settings/profile",
+// 			icon: User,
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Remote Servers",
+// 			url: "/dashboard/settings/servers",
+// 			icon: Server,
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Users",
+// 			icon: Users,
+// 			url: "/dashboard/settings/users",
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "SSH Keys",
+// 			icon: KeyRound,
+// 			url: "/dashboard/settings/ssh-keys",
+// 			// Only enabled for admins and users with access to SSH keys
+// 			isEnabled: ({ auth }) =>
+// 				!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
+// 		},
+// 		{
+// 			title: "AI",
+// 			icon: BotIcon,
+// 			url: "/dashboard/settings/ai",
+// 			isSingle: true,
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Git",
+// 			url: "/dashboard/settings/git-providers",
+// 			icon: GitBranch,
+// 			// Only enabled for admins and users with access to Git providers
+// 			isEnabled: ({ auth }) =>
+// 				!!(auth?.role === "owner" || auth?.canAccessToGitProviders),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Registry",
+// 			url: "/dashboard/settings/registry",
+// 			icon: Package,
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "S3 Destinations",
+// 			url: "/dashboard/settings/destinations",
+// 			icon: Database,
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+
+// 		{
+// 			isSingle: true,
+// 			title: "Certificates",
+// 			url: "/dashboard/settings/certificates",
+// 			icon: ShieldCheck,
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Cluster",
+// 			url: "/dashboard/settings/cluster",
+// 			icon: Boxes,
+// 			// Only enabled for admins in non-cloud environments
+// 			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Notifications",
+// 			url: "/dashboard/settings/notifications",
+// 			icon: Bell,
+// 			// Only enabled for admins
+// 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+// 		},
+// 		{
+// 			isSingle: true,
+// 			title: "Billing",
+// 			url: "/dashboard/settings/billing",
+// 			icon: CreditCard,
+// 			// Only enabled for admins in cloud environments
+// 			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && isCloud),
+// 		},
+// 	],
+
+// 	help: [
+// 		{
+// 			name: "Documentation",
+// 			url: "https://docs.dokploy.com/docs/core",
+// 			icon: BookIcon,
+// 		},
+// 		{
+// 			name: "Support",
+// 			url: "https://discord.gg/2tBnJ3jDJc",
+// 			icon: CircleHelp,
+// 		},
+// 		{
+// 			name: "Sponsor",
+// 			url: "https://opencollective.com/dokploy",
+// 			icon: ({ className }) => (
+// 				<HeartIcon
+// 					className={cn(
+// 						"text-red-500 fill-red-600 animate-heartbeat",
+// 						className,
+// 					)}
+// 				/>
+// 			),
+// 		},
+// 	],
+// } as const;
 
 /**
  * Creates a menu based on the current user's role and permissions
@@ -405,6 +606,7 @@ function createMenuForAuthUser(opts: {
 	auth?: AuthQueryOutput;
 	isCloud: boolean;
 }): Menu {
+	const MENU = useMenu();
 	return {
 		// Filter the home items based on the user's role and permissions
 		// Calls the `isEnabled` function if it exists to determine if the item should be displayed

@@ -55,6 +55,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 							});
 					}}
 				>
+					{data?.composeStatus !== "done" &&(
 					<Button
 						variant="default"
 						isLoading={data?.composeStatus === "running"}
@@ -62,7 +63,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 					>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<div className="flex items-center">
+								<div className="flex items-center h-fit">
 									<Rocket className="size-4 mr-1" />
 									Deploy
 								</div>
@@ -74,6 +75,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 							</TooltipPrimitive.Portal>
 						</Tooltip>
 					</Button>
+					)}
 				</DialogAction>
 				<DialogAction
 					title="Reload Compose"
@@ -99,7 +101,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 					>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<div className="flex items-center">
+								<div className="flex items-center h-fit">
 									<RefreshCcw className="size-4 mr-1" />
 									Reload
 								</div>
@@ -138,7 +140,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 						>
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<div className="flex items-center">
+									<div className="flex items-center h-fit">
 										<CheckCircle2 className="size-4 mr-1" />
 										Start
 									</div>

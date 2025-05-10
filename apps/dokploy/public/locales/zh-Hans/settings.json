@@ -1,5 +1,6 @@
 {
-	"settings.common.save": "保存",
+	
+"settings.common.save": "保存",
 	"settings.common.enterTerminal": "终端",
 	"settings.server.domain.title": "服务器域名",
 	"settings.server.domain.description": "为您的服务器应用添加域名。",

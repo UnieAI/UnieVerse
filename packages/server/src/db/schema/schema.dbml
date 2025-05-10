@@ -262,11 +262,13 @@ table certificate {
   serverId text
 }
 
-table compose {
+
+
   composeId text [pk, not null]
   name text [not null]
   appName text [not null]
   description text
+  serviceScreenshot text
   env text
   composeFile text [not null, default: '']
   refreshToken text

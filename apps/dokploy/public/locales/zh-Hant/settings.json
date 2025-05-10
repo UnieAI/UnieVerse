@@ -36,6 +36,7 @@
 	"settings.server.webServer.storage.cleanAll": "清理所有內容",
 
 	"settings.profile.title": "帳戶",
+	"settings.profile.project.title": "專案",
 	"settings.profile.description": "更改您的個人資料",
 	"settings.profile.email": "信箱",
 	"settings.profile.password": "密碼",

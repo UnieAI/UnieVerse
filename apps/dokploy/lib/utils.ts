@@ -5,13 +5,21 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export async function generateSHA256Hash(text: string) {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(text);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+export async function generateSHA256Hash(text: string): Promise<string> {
+	if (typeof window !== "undefined" && window.crypto?.subtle) {
+		// Browser environment
+		const encoder = new TextEncoder();
+		const data = encoder.encode(text);
+		const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+		const hashArray = Array.from(new Uint8Array(hashBuffer));
+		return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+	} else {
+		// Node.js environment
+		const { createHash } = await import("crypto");
+		return createHash("sha256").update(text).digest("hex");
+	}
 }
+
 
 export function formatTimestamp(timestamp: string | number) {
 	try {

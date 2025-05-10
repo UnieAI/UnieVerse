@@ -1,5 +1,6 @@
 {
-	"settings.common.save": "Simpan",
+	
+"settings.common.save": "Simpan",
 	"settings.common.enterTerminal": "Buka Terminal",
 	"settings.server.domain.title": "Domain Server",
 	"settings.server.domain.description": "Tambahkan domain ke aplikasi server anda.",

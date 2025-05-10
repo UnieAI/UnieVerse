@@ -1,5 +1,6 @@
 {
-	"settings.common.save": "Guardar",
+	
+"settings.common.save": "Guardar",
 	"settings.server.domain.title": "Dominio del Servidor",
 	"settings.server.domain.description": "Añade un dominio a tu aplicación de servidor.",
 	"settings.server.domain.form.domain": "Dominio",

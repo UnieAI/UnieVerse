@@ -17,6 +17,7 @@ import { ProjectLayout } from "@/components/layouts/project-layout";
 import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
+import ConfettiExplosion from "react-confetti-explosion";
 import {
 	Card,
 	CardContent,
@@ -47,7 +48,7 @@ import type {
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { type ReactElement, useEffect, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
 
@@ -68,6 +69,7 @@ const Service = (
 	const { projectId } = router.query;
 	const [tab, setTab] = useState<TabState>(activeTab);
 
+
 	useEffect(() => {
 		if (router.query.tab) {
 			setTab(router.query.tab as TabState);
@@ -83,6 +85,32 @@ const Service = (
 
 	const { data: auth } = api.user.get.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
+
+	const [showFirework, setShowFirework] = useState(false)
+	const prevStatusRef = useRef<string | null>(null)
+	const hasMounted = useRef(false)
+
+	useEffect(() => {
+		const currentStatus = data?.composeStatus ?? null
+		const prevStatus = prevStatusRef.current
+
+		// 初次掛載，只記錄狀態不觸發煙火
+		if (!hasMounted.current) {
+			hasMounted.current = true
+			prevStatusRef.current = currentStatus
+			return
+		}
+
+		// 狀態從非 "done" → "done" 時觸發煙火
+		if (prevStatus !== "done" && currentStatus === "done") {
+			setShowFirework(true)
+			setTimeout(() => setShowFirework(false), 3000)
+		}
+
+		// 更新前一個狀態
+		prevStatusRef.current = currentStatus
+	}, [data?.composeStatus])
+
 
 	return (
 		<div className="pb-10">
@@ -101,10 +129,24 @@ const Service = (
 			/>
 			<Head>
 				<title>
-					Compose: {data?.name} - {data?.project.name} | UnieVerse™
+					{data?.name} | UnieVerse™
 				</title>
+				{/* {data?.project.name} |  */}
 			</Head>
 			<div className="w-full">
+				<div className="w-full flex items-center justify-center">
+					{showFirework && (
+						<ConfettiExplosion
+							duration={3000}
+							force={0.3}
+							particleSize={12}
+							particleCount={300}
+							className="z-[9999]"
+							zIndex={9999}
+							width={1500}
+						/>
+					)}
+				</div>
 				<Card className="h-full bg-sidebar  p-2.5 rounded-xl w-full">
 					<div className="rounded-xl bg-background shadow-md ">
 						<div className="flex flex-col gap-4">
@@ -130,24 +172,27 @@ const Service = (
 								</div>
 								<div className="flex flex-col h-fit w-fit gap-2">
 									<div className="flex flex-row h-fit w-fit gap-2">
-										<Badge
-											className="cursor-pointer"
-											onClick={() => {
-												if (data?.server?.ipAddress) {
-													copy(data.server.ipAddress);
-													toast.success("IP Address Copied!");
-												}
-											}}
-											variant={
-												!data?.serverId
-													? "default"
-													: data?.server?.serverStatus === "active"
+										{data?.server?.ipAddress && (
+											<Badge
+												className="cursor-pointer"
+												onClick={() => {
+													if (data?.server?.ipAddress) {
+														copy(data.server.ipAddress);
+														toast.success("IP Address Copied!");
+													}
+												}}
+												variant={
+													!data?.serverId
 														? "default"
-														: "destructive"
-											}
-										>
-											{data?.server?.name || "UnieVerse™ Server"}
-										</Badge>
+														: data?.server?.serverStatus === "active"
+															? "default"
+															: "destructive"
+												}
+											>
+												{data?.server?.name || "UnieVerse™ Server"}
+											</Badge>
+										)}
+
 										{data?.server?.serverStatus === "inactive" && (
 											<TooltipProvider>
 												<Tooltip>
@@ -219,13 +264,14 @@ const Service = (
 											className={cn(
 												"lg:grid lg:w-fit max-md:overflow-y-scroll justify-start",
 												isCloud && data?.serverId
-													? "lg:grid-cols-9"
+													? "lg:grid-cols-10"
 													: data?.serverId
-														? "lg:grid-cols-8"
-														: "lg:grid-cols-9",
+														? "lg:grid-cols-9"
+														: "lg:grid-cols-10",
 											)}
 										>
 											<TabsTrigger value="general">General</TabsTrigger>
+											<TabsTrigger value="preview">Preview</TabsTrigger>
 											<TabsTrigger value="environment">Environment</TabsTrigger>
 											<TabsTrigger value="domains">Domains</TabsTrigger>
 											<TabsTrigger value="deployments">Deployments</TabsTrigger>
@@ -242,6 +288,10 @@ const Service = (
 									<TabsContent value="general">
 										<div className="flex flex-col gap-4 pt-2.5">
 											<ShowGeneralCompose composeId={composeId} />
+										</div>
+									</TabsContent>
+									<TabsContent value="preview">
+										<div className="flex flex-col gap-4 pt-2.5">
 										</div>
 									</TabsContent>
 									<TabsContent value="environment">
