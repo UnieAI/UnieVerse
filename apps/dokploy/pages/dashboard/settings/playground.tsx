@@ -598,7 +598,7 @@ const Page = () => {
 
                 {/* Summary for each thread */}
                 <div className="space-y-2">
-                    <label className="text-sm">Summary (Last Assistant Response)</label>
+                    <label className="text-sm">Thread Summary (Last Assistant Response)</label>
                     <div className="space-y-2">
                         {parallelMessages.map((messages, index) => {
                             const last = [...messages].reverse().find(msg => msg.role === 'assistant');
@@ -618,7 +618,7 @@ const Page = () => {
                                         }
                                     `}
                                 >
-                                    <div className="text-sm">Thread #{index + 1}</div>
+                                    <div className="text-sm">#{index + 1}</div>
                                     {last && (
                                         <>
                                             {last.durationMs != null && (
