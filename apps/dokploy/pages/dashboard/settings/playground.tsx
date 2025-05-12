@@ -19,8 +19,15 @@ import { Send, Code } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
-    role: "system" | "user" | "assistant"
-    content: string
+    role: "system" | "user" | "assistant";
+    content: string;
+
+    loading?: boolean; // 前端UI...動畫
+
+    requestTime?: string;          // ISO 格式時間，例如 "2025-05-12T09:38:01.123Z"
+    responseStartTime?: string;    // 回應開始時間
+    responseEndTime?: string;      // 回應完成時間
+    durationMs?: number;           // 毫秒耗時（responseTime - requestTime）
 }
 
 interface ModelParams {
@@ -39,10 +46,10 @@ const Page = () => {
 
     const isMobile = useIsMobile();
 
-    // https://api.exp.unieai.com
-    const [apiUrl, setApiUrl] = useState<string>("https://api2.unieai.com");
-    // sk-XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc
-    const [apiToken, setApiToken] = useState<string>("sk-ZpMqU0NAXCmiwYF_krHGFjN5kmmlhc1BBcYuYZO2NKcBh-l1l4NZb6MGusI");
+    // https://api2.unieai.com
+    const [apiUrl, setApiUrl] = useState<string>("https://api.exp.unieai.com");
+    // sk-ZpMqU0NAXCmiwYF_krHGFjN5kmmlhc1BBcYuYZO2NKcBh-l1l4NZb6MGusI
+    const [apiToken, setApiToken] = useState<string>("sk-XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc");
     const [models, setModels] = useState<any>([]);
     const [model, setModel] = useState<string>("");
 
@@ -128,7 +135,7 @@ const Page = () => {
             ]);
         } else {
             // 延續每組對話
-            newParallelMessages = parallelMessages.map(conv => [
+            newParallelMessages = parallelMessages.map((conv: any) => [
                 ...conv,
                 baseUserMessage,
                 baseAssistantLoading,
@@ -162,6 +169,9 @@ const Page = () => {
                         stream: true,
                     });
 
+                    // 紀錄開始串流時間
+                    const requestTime = new Date().toISOString();
+
                     const response = await fetch(`${apiUrl}/v1/chat/completions`, {
                         method: "POST",
                         headers: {
@@ -179,10 +189,11 @@ const Page = () => {
                     let partialContent = "";
 
                     // 替換 loading，插入空 assistant response
-                    setParallelMessages(prev => {
+                    setParallelMessages((prev: any) => {
                         const newState = [...prev];
                         const conv = [...newState[index]];
-                        conv[conv.length - 1] = { role: "assistant", content: "" };
+                        const assistantMessage = conv[conv.length - 1];
+                        conv[conv.length - 1] = { role: "assistant", content: "", requestTime: requestTime };
                         newState[index] = conv;
                         return newState;
                     });
@@ -202,14 +213,20 @@ const Page = () => {
                                     const json = JSON.parse(line.slice(6));
                                     const delta = json.choices?.[0]?.delta?.content;
                                     if (delta) {
-                                        setParallelMessages(prev => {
+                                        const now = Date.now(); // 當前時間（毫秒）
+                                        const responseTime = new Date(); // 紀錄結束串流時間
+                                        setParallelMessages((prev: any) => {
                                             const newState = [...prev];
                                             const conv = [...newState[index]];
                                             const last = conv[conv.length - 1];
                                             if (last.role === "assistant") {
+                                                const requestTimestamp = last.requestTime ? new Date(last.requestTime).getTime() : now;
                                                 conv[conv.length - 1] = {
                                                     ...last,
-                                                    content: last.content + delta
+                                                    content: last.content + delta,
+                                                    responseStartTime: last.responseStartTime ? last.responseStartTime : responseTime.toISOString(),
+                                                    responseEndTime: responseTime.toISOString(),
+                                                    durationMs: now - requestTimestamp,
                                                 };
                                                 newState[index] = conv;
                                             }
@@ -225,12 +242,14 @@ const Page = () => {
 
                 } catch (err) {
                     console.error("Stream error", err);
-                    setParallelMessages(prev => {
+                    const responseTime = new Date(); // 紀錄結束串流時間
+                    setParallelMessages((prev: any) => {
                         const newState = [...prev];
                         const conv = [...newState[index]];
                         conv[conv.length - 1] = {
                             role: "assistant",
-                            content: "Error occurred during response."
+                            content: "Error occurred during response.",
+                            responseEndTime: responseTime.toISOString(),
                         };
                         newState[index] = conv;
                         return newState;
@@ -265,13 +284,19 @@ const Page = () => {
 
     return (
         <div className="flex h-[90vh] gap-4 w-full overflow-hide">
-            <div className=" w-full flex flex-col flex-1 border-r border-zinc-200 dark:border-zinc-800 p-4">
-
-                <div className="flex flex-1 flex-row">
-                    {parallelMessages.map((msgs, i) => (
-                        <div className="relative flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
-                            <MessageRender key={i} messages={msgs} />
-                        </div>
+            <div className="w-full flex flex-col flex-1 border-zinc-200 dark:border-zinc-800 p-4">
+                <div className="flex flex-1 flex-row scrollbar-hide overflow-y-auto">
+                    {parallelMessages.map((msgs: any, index: any) => (
+                        <>
+                            <div className="relative flex-1 p-4 overflow-y-auto">
+                                <MessageRender key={index} messages={msgs} />
+                            </div>
+                            {
+                                index < parallelMessages.length - 1 && (
+                                    <div className="w-px bg-gray-300" />
+                                )
+                            }
+                        </>
                     ))}
                 </div>
 
@@ -304,7 +329,7 @@ const Page = () => {
                 </div>
             </div>
 
-            {!isMobile && <div className="w-96 p-4 space-y-6 overflow-auto">
+            {!isMobile && <div className="w-96 p-4 border-l space-y-6 overflow-auto">
 
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">options</h3>
@@ -535,10 +560,24 @@ interface MessageRenderProps {
 }
 
 const MessageRender = ({ messages }: MessageRenderProps) => {
+
+    const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
+        if (!requestTime || !responseStartTime) return "-";
+        const waitMs = new Date(responseStartTime).getTime() - new Date(requestTime).getTime();
+        return `${waitMs} ms`;
+    };
+
+
+    const calculateCharsPerSecond = (content: string, durationMs?: number): string => {
+        if (!durationMs || durationMs <= 0) return "-";
+        const cps = (content.length / durationMs) * 1000; // 轉換成每秒
+        return `${cps.toFixed(1)} chars/sec`;
+    }
+
     return (
-        <>
+        <div className="">
             {
-                messages.map((message, index) => (
+                messages.map((message: any, index: any) => (
                     <motion.div
                         key={index}
                         className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -570,13 +609,26 @@ const MessageRender = ({ messages }: MessageRenderProps) => {
                                     <WaveLoading />
                                 </div>
                             ) : (
-                                <RenderedResult content={message.content} />
+                                <>
+                                    <RenderedResult content={message.content} />
+                                    {/* ✅ 顯示回應時間與耗時 */}
+                                    {message.requestTime && message.responseStartTime && message.responseEndTime && message.durationMs !== undefined && (
+                                        <div className="mt-1 text-xs opacity-60 text-right">
+                                            <div>🕒 Send request: {new Date(message.requestTime).toLocaleTimeString()}</div>
+                                            <div>⏳ Wait: {calculateWaitTime(message.requestTime, message.responseStartTime)}</div>
+                                            <div>🕒 Get first response: {new Date(message.responseStartTime).toLocaleTimeString()}</div>
+                                            <div>⏱️ Streaming time: {message.durationMs.toFixed(0)} ms</div>
+                                            <div>🕒 Get last response: {new Date(message.responseEndTime).toLocaleTimeString()}</div>
+                                            <div>⏳ Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </motion.div>
                 ))
             }
-        </>
+        </div>
     )
 }
 
@@ -650,7 +702,7 @@ const renderResultWithMedia = (text: string) => {
             if (imgMatch) {
                 const imgUrl = imgMatch[1];
                 resultElements.push(
-                    <ImageComponent key={imgUrl} url={normalizeUrl(imgUrl)} />
+                    <ImageComponent key={imgUrl} url={normalizeUrl(imgUrl!)} />
                 );
             }
         }
@@ -660,7 +712,7 @@ const renderResultWithMedia = (text: string) => {
             if (videoMatch) {
                 const videoUrl = videoMatch[1];
                 resultElements.push(
-                    <VideoComponent key={videoUrl} url={normalizeUrl(videoUrl)} />
+                    <VideoComponent key={videoUrl} url={normalizeUrl(videoUrl!)} />
                 );
             }
         }
@@ -670,7 +722,7 @@ const renderResultWithMedia = (text: string) => {
             if (linkMatch) {
                 const linkUrl = linkMatch[1];
                 resultElements.push(
-                    <LinkComponent key={linkUrl} url={normalizeUrl(linkUrl)} />
+                    <LinkComponent key={linkUrl} url={normalizeUrl(linkUrl!)} />
                 );
             }
         }
@@ -680,7 +732,7 @@ const renderResultWithMedia = (text: string) => {
             if (otherMatch) {
                 const otherUrl = otherMatch[1];
                 resultElements.push(
-                    <LinkComponent key={otherUrl} url={normalizeUrl(otherUrl)} />
+                    <LinkComponent key={otherUrl} url={normalizeUrl(otherUrl!)} />
                 );
             }
         }
