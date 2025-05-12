@@ -796,9 +796,9 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
                                             <div>🕒 Send request: {new Date(message.requestTime).toLocaleTimeString()}</div>
                                             <div>⏳ Wait: {calculateWaitTime(message.requestTime, message.responseStartTime)}</div>
                                             <div>🕒 Get first response: {new Date(message.responseStartTime).toLocaleTimeString()}</div>
-                                            <div>⏱️ Streaming time: {message.durationMs.toFixed(0)} ms</div>
                                             <div>🕒 Get last response: {new Date(message.responseEndTime).toLocaleTimeString()}</div>
-                                            <div>⏳ Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>
+                                            <div>⏳ Streaming time: {message.durationMs.toFixed(0)} ms</div>
+                                            <div>Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>
                                         </div>
                                     )}
                                 </>
