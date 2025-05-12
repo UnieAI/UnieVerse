@@ -60,10 +60,10 @@ pnpm i
 docker run --name dokploy-redis -p 6379:6379 -d redis
 ```
 ```bash
-docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=dokploy -p 5432:5432 -d postgres
+docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=dokploy -e POSTGRES_DB=dokploy -p 5432:5432 -d postgres
 ```
 ```bash
-pnpm server:script
+pnpm dokploy:setup
 ```
 ```bash
 pnpm dokploy:dev
