@@ -619,30 +619,15 @@ const Page = () => {
                                     `}
                                 >
                                     <div className="font-bold mb-1">Thread #{index + 1}</div>
-                                    {last ? (
+                                    {last && (
                                         <>
-                                            {/* {last.requestTime && (
-                                                <div>Request Sent Time: {new Date(last.requestTime).toLocaleTimeString()}</div>
-                                            )}
-                                            {last.requestTime && last.responseStartTime && (
-                                                <div>Time Waiting for First Response: {calculateWaitTime(last.requestTime, last.responseStartTime)}</div>
-                                            )}
-                                            {last.responseStartTime && (
-                                                <div>First Response Received Time: {new Date(last.responseStartTime).toLocaleTimeString()}</div>
-                                            )}
-                                            {last.responseEndTime && (
-                                                <div>Final Response Completed Time: {new Date(last.responseEndTime).toLocaleTimeString()}</div>
-                                            )} */}
                                             {last.durationMs != null && (
-                                                <>
-                                                    {/* <div>Streaming Duration: {last.durationMs.toFixed(0)} ms</div> */}
-                                                    {/* <div>Characters Per Second: {calculateCharsPerSecond(last.content, last.durationMs)}</div> */}
-                                                    <div>{calculateCharsPerSecond(last.content, last.durationMs)}</div>
-                                                </>
+                                                <div>
+                                                    <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
+                                                    <span className="text-xs ml-1">chars/sec</span>
+                                                </div>
                                             )}
                                         </>
-                                    ) : (
-                                        <div>No assistant response yet.</div>
                                     )}
                                 </div>
                             );
@@ -868,17 +853,13 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
                                 </div>
                             ) : (
                                 <>
+                                    {/* 渲染訊息 */}
                                     <RenderedResult content={message.content} />
 
-                                    {/* ✅ 顯示回應時間與耗時 */}
-                                    <div className="mt-1 text-xs opacity-60 text-left">
-                                        {message.requestTime != undefined && <div>🕒 Send request: {new Date(message.requestTime).toLocaleTimeString()}</div>}
-                                        {message.requestTime != undefined && message.responseStartTime != undefined && <div>⏳ Wait: {calculateWaitTime(message.requestTime, message.responseStartTime)}</div>}
-                                        {message.responseStartTime != undefined && <div>🕒 Get first response: {new Date(message.responseStartTime).toLocaleTimeString()}</div>}
-                                        {message.responseEndTime != undefined && <div>🕒 Get last response: {new Date(message.responseEndTime).toLocaleTimeString()}</div>}
-                                        {message.durationMs != undefined && <div>⏳ Streaming time: {message.durationMs.toFixed(0)} ms</div>}
-                                        {message.durationMs != undefined && <div>Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>}
-                                    </div>
+                                    {/* 顯示回應時間與耗時 */}
+                                    {(message.role === "assistant") && (
+                                        <MessageTimingDetail message={message} />
+                                    )}
                                 </>
                             )}
                         </div>
@@ -888,6 +869,75 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
         </>
     )
 }
+
+interface MessageTimingDetailProps {
+    message: {
+        requestTime?: string;
+        responseStartTime?: string;
+        responseEndTime?: string;
+        durationMs?: number;
+        content: string;
+    };
+}
+
+const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="mt-1 text-xs opacity-60 text-left">
+            <button
+                className="hover:underline"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                {isOpen ? "hide detail ▲" : "detail ▼"}
+            </button>
+
+            {isOpen && (
+                <div className="mt-1 space-y-0.5">
+                    {message.requestTime && (
+                        <div>
+                            <span>Send request: </span>
+                            <span className="text-sm">{new Date(message.requestTime).toLocaleTimeString()}</span>
+                        </div>
+                    )}
+                    {message.requestTime && message.responseStartTime && (
+                        <div>
+                            <span>Wait: </span>
+                            <span className="text-sm">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
+                        </div>
+                    )}
+                    {message.responseStartTime && (
+                        <div>
+                            <span>Get first response: </span>
+                            <span className="text-sm">{new Date(message.responseStartTime).toLocaleTimeString()}</span>
+                        </div>
+                    )}
+                    {message.responseEndTime && (
+                        <div>
+                            <span>Get last response: </span>
+                            <span className="text-sm">{new Date(message.responseEndTime).toLocaleTimeString()}</span>
+                        </div>
+                    )}
+                    {message.durationMs != null && (
+                        <div>
+                            <span>Streaming time: </span>
+                            <span className="text-sm">{message.durationMs.toFixed(0)}</span>
+                            <span className="ml-1">ms</span>
+                        </div>
+                    )}
+                    {message.durationMs != null && (
+                        <div>
+                            <span className="text-sm">
+                                {calculateCharsPerSecond(message.content, message.durationMs)}
+                            </span>
+                            <span className="ml-1">chars/sec</span>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 interface RenderedResultProp {
     content: string;
@@ -1245,5 +1295,5 @@ const calculateWaitTime = (requestTime?: string, responseStartTime?: string): st
 const calculateCharsPerSecond = (content: string, durationMs?: number): string => {
     if (!durationMs || durationMs <= 0) return "-";
     const cps = (content.length / durationMs) * 1000; // 轉換成每秒
-    return `${cps.toFixed(1)} chars/sec`;
+    return `${cps.toFixed(1)}`;
 }
