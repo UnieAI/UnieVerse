@@ -57,6 +57,7 @@ const Page = () => {
     const [maxConcurrency, setMaxConcurrency] = useState(0);
 
     // 壓測數量
+    const maxCount = 30;
     const [parallelCount, setParallelCount] = useState<number>(1); // 實際值
     const [tempParallelCount, setTempParallelCount] = useState<number>(1); // 暫存輸入值
 
@@ -99,7 +100,7 @@ const Page = () => {
 
         const results: Result[] = [];
 
-        const requests = Array.from({ length: 30 }, (_, i) => {
+        const requests = Array.from({ length: Math.min(maxCount, 30) }, (_, i) => {
             return new Promise<void>((resolve) => {
                 const img = new Image();
                 const requestSentTime = Date.now();
@@ -458,6 +459,7 @@ const Page = () => {
                     <h3 className="text-lg font-semibold">options</h3>
                 </div>
 
+                {/* LLM api settings */}
                 <div className="space-y-2">
                     <label className="text-sm">API URL</label>
                     <input
@@ -486,6 +488,7 @@ const Page = () => {
                     </Button>
                 </div>
 
+                {/* Select model */}
                 <div className="space-y-2">
                     <label className="text-sm">Select Model</label>
                     <select
@@ -500,13 +503,14 @@ const Page = () => {
                     </select>
                 </div>
 
+                {/* Parallel instances */}
                 <div className="space-y-2">
                     <label className="text-sm">Parallel Instances</label>
                     <div className="flex flex-row gap-2">
                         <input
                             type="number"
                             min={1}
-                            max={30}
+                            max={maxCount}
                             value={tempParallelCount}
                             onChange={(e) => setTempParallelCount(Number(e.target.value))}
                             disabled={isLoading || isReplying}
@@ -525,6 +529,7 @@ const Page = () => {
                     </div>
                 </div>
 
+                {/* Show thread btn */}
                 <div className="space-y-2">
                     <label className="text-sm">Show Threads</label>
                     <div className="grid grid-cols-5 gap-2">
@@ -553,7 +558,46 @@ const Page = () => {
                     </div>
                 </div>
 
+                {/* Summary for each thread */}
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold">Summary (Last Assistant Response)</label>
+                    <div className="space-y-2">
+                        {parallelMessages.map((messages, index) => {
+                            const last = [...messages].reverse().find(msg => msg.role === 'assistant');
+                            return (
+                                <div key={index} className="p-3 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900">
+                                    <div className="font-bold mb-1">Thread #{index + 1}</div>
+                                    {last ? (
+                                        <>
+                                            {last.requestTime && (
+                                                <div>Request Sent Time: {new Date(last.requestTime).toLocaleTimeString()}</div>
+                                            )}
+                                            {last.requestTime && last.responseStartTime && (
+                                                <div>Time Waiting for First Response: {calculateWaitTime(last.requestTime, last.responseStartTime)}</div>
+                                            )}
+                                            {last.responseStartTime && (
+                                                <div>First Response Received Time: {new Date(last.responseStartTime).toLocaleTimeString()}</div>
+                                            )}
+                                            {last.responseEndTime && (
+                                                <div>Final Response Completed Time: {new Date(last.responseEndTime).toLocaleTimeString()}</div>
+                                            )}
+                                            {last.durationMs != null && (
+                                                <>
+                                                    <div>Streaming Duration: {last.durationMs.toFixed(0)} ms</div>
+                                                    <div>Characters Per Second: {calculateCharsPerSecond(last.content, last.durationMs)}</div>
+                                                </>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div>No assistant response yet.</div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
 
+                {/* Reset chat room btn */}
                 <div className="space-y-2">
                     <label className="text-sm">Reset Chat Room</label>
                     <Button
@@ -565,6 +609,7 @@ const Page = () => {
                     </Button>
                 </div>
 
+                {/* LLM api payload */}
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <div className="flex justify-between">
@@ -736,19 +781,6 @@ interface MessageRenderProps {
 }
 
 const MessageRender = ({ thread, messages }: MessageRenderProps) => {
-
-    const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
-        if (!requestTime || !responseStartTime) return "-";
-        const waitMs = new Date(responseStartTime).getTime() - new Date(requestTime).getTime();
-        return `${waitMs} ms`;
-    };
-
-
-    const calculateCharsPerSecond = (content: string, durationMs?: number): string => {
-        if (!durationMs || durationMs <= 0) return "-";
-        const cps = (content.length / durationMs) * 1000; // 轉換成每秒
-        return `${cps.toFixed(1)} chars/sec`;
-    }
 
     return (
         <>
@@ -1148,3 +1180,17 @@ const UnieAISVG = (
     );
 };
 
+// --- Eric Finctions --- //
+
+const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
+    if (!requestTime || !responseStartTime) return "-";
+    const waitMs = new Date(responseStartTime).getTime() - new Date(requestTime).getTime();
+    return `${waitMs} ms`;
+};
+
+
+const calculateCharsPerSecond = (content: string, durationMs?: number): string => {
+    if (!durationMs || durationMs <= 0) return "-";
+    const cps = (content.length / durationMs) * 1000; // 轉換成每秒
+    return `${cps.toFixed(1)} chars/sec`;
+}
