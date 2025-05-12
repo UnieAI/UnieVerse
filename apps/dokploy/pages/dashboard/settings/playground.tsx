@@ -22,12 +22,14 @@ interface Message {
     role: "system" | "user" | "assistant";
     content: string;
 
-    loading?: boolean; // 前端UI...動畫
+    loading?: boolean;             // 前端UI...動畫
 
     requestTime?: string;          // ISO 格式時間，例如 "2025-05-12T09:38:01.123Z"
     responseStartTime?: string;    // 回應開始時間
     responseEndTime?: string;      // 回應完成時間
     durationMs?: number;           // 毫秒耗時（responseTime - requestTime）
+
+    state?: "pending" | "streaming" | "complete" | "error" | "abort";
 }
 
 interface ModelParams {
@@ -205,7 +207,7 @@ const Page = () => {
 
         // 初始化或更新每組對話紀錄
         let baseUserMessage = { role: "user", content: message };
-        let baseAssistantLoading = { role: "assistant", content: "loading", loading: true };
+        let baseAssistantLoading = { role: "assistant", content: "loading", loading: true, state: "pending" };
 
         let newParallelMessages: any = [];
 
@@ -275,15 +277,30 @@ const Page = () => {
                     setParallelMessages((prev: any) => {
                         const newState = [...prev];
                         const conv = [...newState[index]];
-                        const assistantMessage = conv[conv.length - 1];
-                        conv[conv.length - 1] = { role: "assistant", content: "", requestTime: requestTime };
+                        conv[conv.length - 1] = { role: "assistant", content: "", requestTime: requestTime, state: "pending", };
                         newState[index] = conv;
                         return newState;
                     });
 
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done) {
+                            setParallelMessages((prev: any) => {
+                                const newState = [...prev];
+                                const conv = [...newState[index]];
+                                const last = conv[conv.length - 1];
+                                if (last.role === "assistant") {
+                                    conv[conv.length - 1] = {
+                                        ...last,
+                                        state: "complete",
+                                    };
+                                    newState[index] = conv;
+                                }
+                                return newState;
+                            });
+                            break;
+                        }
+
 
                         partialContent += decoder.decode(value, { stream: true });
                         const lines = partialContent.split("\n");
@@ -303,13 +320,13 @@ const Page = () => {
                                             const conv = [...newState[index]];
                                             const last = conv[conv.length - 1];
                                             if (last.role === "assistant") {
-                                                const requestTimestamp = last.requestTime ? new Date(last.requestTime).getTime() : now;
                                                 conv[conv.length - 1] = {
                                                     ...last,
                                                     content: last.content + delta,
                                                     responseStartTime: last.responseStartTime ? last.responseStartTime : responseTime.toISOString(),
                                                     responseEndTime: responseTime.toISOString(),
-                                                    durationMs: now - requestTimestamp,
+                                                    durationMs: now - new Date(last.responseStartTime).getTime(),
+                                                    state: "streaming",
                                                 };
                                                 newState[index] = conv;
                                             }
@@ -327,6 +344,22 @@ const Page = () => {
                     const responseTime = new Date(); // 紀錄結束串流時間
                     if (err.name === 'AbortError') {
                         toast.success("Stop streaming.");
+
+                        setParallelMessages((prev: any) => {
+                            const newState = [...prev];
+                            const conv = [...newState[index]];
+                            const last = conv[conv.length - 1];
+                            if (last.role === "assistant") {
+                                conv[conv.length - 1] = {
+                                    ...last,
+                                    role: "assistant",
+                                    responseEndTime: responseTime.toISOString(),
+                                    state: "abort",
+                                };
+                                newState[index] = conv;
+                            }
+                            return newState;
+                        });
                     }
                     else {
                         toast.error("Streaming error: ", err);
@@ -334,12 +367,17 @@ const Page = () => {
                         setParallelMessages((prev: any) => {
                             const newState = [...prev];
                             const conv = [...newState[index]];
-                            conv[conv.length - 1] = {
-                                role: "assistant",
-                                content: "Error occurred during response.",
-                                responseEndTime: responseTime.toISOString(),
-                            };
-                            newState[index] = conv;
+                            const last = conv[conv.length - 1];
+                            if (last.role === "assistant") {
+                                conv[conv.length - 1] = {
+                                    ...last,
+                                    role: "assistant",
+                                    content: "Error occurred during response.",
+                                    responseEndTime: responseTime.toISOString(),
+                                    state: "error",
+                                };
+                                newState[index] = conv;
+                            }
                             return newState;
                         });
                     }
@@ -560,16 +598,30 @@ const Page = () => {
 
                 {/* Summary for each thread */}
                 <div className="space-y-2">
-                    <label className="text-sm font-semibold">Summary (Last Assistant Response)</label>
+                    <label className="text-sm">Summary (Last Assistant Response)</label>
                     <div className="space-y-2">
                         {parallelMessages.map((messages, index) => {
                             const last = [...messages].reverse().find(msg => msg.role === 'assistant');
                             return (
-                                <div key={index} className="p-3 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900">
+                                <div
+                                    key={index}
+                                    className={`p-3 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900
+                                        ${last?.state === "complete"
+                                            ? "border-green-400 dark:border-green-600"
+                                            : last?.state === "streaming"
+                                                ? "border-yellow-400 dark:border-yellow-600"
+                                                : last?.state === "error"
+                                                    ? "border-red-400 dark:border-red-600"
+                                                    : last?.state === "abort"
+                                                        ? "border-orange-400 dark:border-orange-600"
+                                                        : "border-zinc-400 dark:border-zinc-600"
+                                        }
+                                    `}
+                                >
                                     <div className="font-bold mb-1">Thread #{index + 1}</div>
                                     {last ? (
                                         <>
-                                            {last.requestTime && (
+                                            {/* {last.requestTime && (
                                                 <div>Request Sent Time: {new Date(last.requestTime).toLocaleTimeString()}</div>
                                             )}
                                             {last.requestTime && last.responseStartTime && (
@@ -580,11 +632,12 @@ const Page = () => {
                                             )}
                                             {last.responseEndTime && (
                                                 <div>Final Response Completed Time: {new Date(last.responseEndTime).toLocaleTimeString()}</div>
-                                            )}
+                                            )} */}
                                             {last.durationMs != null && (
                                                 <>
-                                                    <div>Streaming Duration: {last.durationMs.toFixed(0)} ms</div>
-                                                    <div>Characters Per Second: {calculateCharsPerSecond(last.content, last.durationMs)}</div>
+                                                    {/* <div>Streaming Duration: {last.durationMs.toFixed(0)} ms</div> */}
+                                                    {/* <div>Characters Per Second: {calculateCharsPerSecond(last.content, last.durationMs)}</div> */}
+                                                    <div>{calculateCharsPerSecond(last.content, last.durationMs)}</div>
                                                 </>
                                             )}
                                         </>
