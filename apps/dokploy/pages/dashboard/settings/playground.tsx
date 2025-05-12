@@ -7,7 +7,7 @@ import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import superjson from "superjson";
 
-import { useState, useEffect, useRef, FocusEvent, ChangeEvent, KeyboardEvent, useMemo } from 'react'
+import React, { useState, useEffect, useRef, FocusEvent, ChangeEvent, KeyboardEvent, useMemo } from 'react'
 import { AutoResizeTextarea } from "@/components/ui/autoResizeTextareaProps";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider";
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Send, Code } from 'lucide-react'
+import { Send, CircleStop } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
@@ -53,17 +53,30 @@ const Page = () => {
     const [models, setModels] = useState<any>([]);
     const [model, setModel] = useState<string>("");
 
-    // 壓測數量
-    const [parallelCount, setParallelCount] = useState<number>(1);
-    const [parallelMessages, setParallelMessages] = useState<any>([]);
+    // 嘗試取得前端瀏覽器最大併發數量
+    const [maxConcurrency, setMaxConcurrency] = useState(0);
 
+    // 壓測數量
+    const [parallelCount, setParallelCount] = useState<number>(1); // 實際值
+    const [tempParallelCount, setTempParallelCount] = useState<number>(1); // 暫存輸入值
+
+    // 選擇顯示的對話串
+    const [selectedIndexes, setSelectedIndexes] = useState<number[]>([1]);
+
+    // 儲存訊息
+    const [parallelMessages, setParallelMessages] = useState<Message[]>([]);
+
+    // 狀態
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isReplying, setIsReplying] = useState<boolean>(false);
 
-    const abortControllerRef = useRef<AbortController | null>(null);
+    // 中止串流
+    const abortControllersRef = useRef<AbortController[]>([]);
 
+    // 訊息暫存輸入值
     const [message, setMessage] = useState<string>("");
 
+    // llm api 參數
     const [modelParams, setModelParams] = useState<ModelParams>({
         temperature: 0.6,
         max_tokens: 4096,
@@ -75,6 +88,59 @@ const Page = () => {
         context_length_exceeded_behavior: "none",
         echo: false
     });
+
+    const testConcurrency = async () => {
+        setIsLoading(true);
+
+        type Result = {
+            requestSentTime: number;
+            responseStartTime: number;
+        };
+
+        const results: Result[] = [];
+
+        const requests = Array.from({ length: 30 }, (_, i) => {
+            return new Promise<void>((resolve) => {
+                const img = new Image();
+                const requestSentTime = Date.now();
+
+                img.onload = img.onerror = () => {
+                    const responseStartTime = Date.now();
+                    results.push({ requestSentTime, responseStartTime });
+                    resolve();
+                };
+
+                img.src = `/api/unieai/dummy?i=${i}&t=${Date.now()}`;
+            });
+        });
+
+        await Promise.all(requests);
+        setIsLoading(false);
+
+        // STEP 1: 依照 responseStartTime 排序
+        results.sort((a, b) => a.responseStartTime - b.responseStartTime);
+
+        // STEP 2: 在每個 responseStartTime 為中心，找 100ms 範圍內有幾筆 response 幾乎同時回來
+        let maxCluster = 0;
+        const clusterWindow = 250; // ms 範圍內算同一批
+
+        for (let i = 0; i < results.length; i++) {
+            const center = results[i].responseStartTime;
+            const count = results.filter(r =>
+                r.responseStartTime >= center &&
+                r.responseStartTime < center + clusterWindow
+            ).length;
+
+            maxCluster = Math.max(maxCluster, count);
+        }
+
+        setMaxConcurrency(maxCluster);
+
+        if (tempParallelCount > maxCluster)
+            toast.warning(`You set ${tempParallelCount} parallel instances, but your browser's actual concurrency limit appears to be around ${maxCluster}.`);
+        else
+            toast.info(`Your browser handled ${maxCluster} concurrent requests. This likely reflects its actual concurrency limit.`);
+    };
 
     const handleRefreshModels = async () => {
         if (!apiUrl || !apiToken) {
@@ -112,8 +178,23 @@ const Page = () => {
     }
 
     const handleSubmit = async () => {
-        if (!message.trim() || isLoading || isReplying || !apiUrl || !apiToken) {
-            toast.error("Invalid state or empty message.");
+        if (!apiUrl || !apiToken) {
+            toast.error("Invalid api url or api token.");
+            return;
+        }
+
+        if (model === "") {
+            toast.error("Invalid model.");
+            return;
+        }
+
+        if (isLoading || isReplying) {
+            toast.error("Wait for loading or replying...");
+            return;
+        }
+
+        if (!message.trim()) {
+            toast.error("Empty message.");
             return;
         }
 
@@ -151,6 +232,7 @@ const Page = () => {
             Array.from({ length: parallelCount }).map(async (_, index) => {
                 try {
                     const controller = new AbortController();
+                    abortControllersRef.current[index] = controller;
 
                     // 取得過往訊息（去除 loading 和 system）
                     const history = (newParallelMessages[index] || []).filter(
@@ -240,20 +322,26 @@ const Page = () => {
                         }
                     }
 
-                } catch (err) {
-                    console.error("Stream error", err);
+                } catch (err: any) {
                     const responseTime = new Date(); // 紀錄結束串流時間
-                    setParallelMessages((prev: any) => {
-                        const newState = [...prev];
-                        const conv = [...newState[index]];
-                        conv[conv.length - 1] = {
-                            role: "assistant",
-                            content: "Error occurred during response.",
-                            responseEndTime: responseTime.toISOString(),
-                        };
-                        newState[index] = conv;
-                        return newState;
-                    });
+                    if (err.name === 'AbortError') {
+                        toast.success("Stop streaming.");
+                    }
+                    else {
+                        toast.error("Streaming error: ", err);
+
+                        setParallelMessages((prev: any) => {
+                            const newState = [...prev];
+                            const conv = [...newState[index]];
+                            conv[conv.length - 1] = {
+                                role: "assistant",
+                                content: "Error occurred during response.",
+                                responseEndTime: responseTime.toISOString(),
+                            };
+                            newState[index] = conv;
+                            return newState;
+                        });
+                    }
                 }
             })
         );
@@ -264,29 +352,43 @@ const Page = () => {
         toast.dismiss(toastId);
     };
 
-    const stopReply = () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            setIsReplying(false);
-            setIsLoading(false);
-        }
+    const abortControllers = () => {
+        abortControllersRef.current.forEach((controller) => {
+            controller.abort();
+        });
+        abortControllersRef.current = [];
     };
 
-    const startNewChat = () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
+    const handleStopReply = () => {
+        abortControllers();
+        setIsReplying(false);
+        setIsLoading(false);
+    };
+
+    const handleResetChatRoom = () => {
+        abortControllers();
         setParallelMessages([]);
         setMessage('');
         setIsLoading(false);
         setIsReplying(false);
     };
 
+    useEffect(() => {
+        if (!isLoading && !isReplying) testConcurrency();
+
+        handleResetChatRoom();
+
+        // 預設選擇 index [0,1,2] (最多 3 個)
+        setSelectedIndexes(
+            Array.from({ length: Math.min(3, parallelCount) }, (_, i) => i)
+        );
+    }, [parallelCount]);
+
     return (
         <div className="flex h-[90vh] gap-4 w-full overflow-hide">
             <div className="w-full flex flex-col flex-1 border-zinc-200 dark:border-zinc-800 p-4">
                 <div className="flex flex-1 flex-row scrollbar-hide overflow-y-auto">
-                    {parallelMessages.map((msgs: any, index: any) => (
+                    {/* {parallelMessages.map((msgs: any, index: any) => (
                         <>
                             <div className="relative flex-1 p-4 overflow-y-auto">
                                 <MessageRender key={index} messages={msgs} />
@@ -297,6 +399,16 @@ const Page = () => {
                                 )
                             }
                         </>
+                    ))} */}
+                    {selectedIndexes.map((index, idx) => (
+                        <React.Fragment key={index}>
+                            <div className="relative flex-1 p-4 overflow-y-auto">
+                                <MessageRender thread={index + 1} messages={parallelMessages[index] || []} />
+                            </div>
+                            {idx < selectedIndexes.length - 1 && (
+                                <div className="w-px bg-gray-300" />
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
 
@@ -318,14 +430,25 @@ const Page = () => {
                         }}
                         placeholder="Type a message"
                         className="flex-1 h-12 px-4 py-2 border border-zinc-300 rounded-md"
+                        disabled={isLoading || isReplying}
                     />
-                    <button
-                        onClick={handleSubmit}
-                        disabled={!message.trim() || isLoading || isReplying}
-                        className="absolute bottom-2 right-2 flex items-center justify-center"
-                    >
-                        <Send className="w-4 h-4 dark:text-zinc-200 hover:opacity-50" />
-                    </button>
+                    {isReplying ? (
+                        <button
+                            onClick={handleStopReply}
+                            className="absolute bottom-2 right-2 z-50 flex items-center justify-center"
+                        >
+                            <CircleStop className="w-4 h-4 dark:text-zinc-200 hover:opacity-50" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isLoading || isReplying}
+                            className="absolute bottom-2 right-2 z-50 flex items-center justify-center"
+                        >
+                            <Send className="w-4 h-4 dark:text-zinc-200 hover:opacity-50" />
+                        </button>
+                    )}
+
                 </div>
             </div>
 
@@ -379,16 +502,68 @@ const Page = () => {
 
                 <div className="space-y-2">
                     <label className="text-sm">Parallel Instances</label>
-                    <input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={parallelCount}
-                        onChange={(e) => setParallelCount(Number(e.target.value))}
-                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                    />
+                    <div className="flex flex-row gap-2">
+                        <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={tempParallelCount}
+                            onChange={(e) => setTempParallelCount(Number(e.target.value))}
+                            disabled={isLoading || isReplying}
+                            className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                        />
+                        <Button
+                            onClick={() => {
+                                setParallelCount(tempParallelCount);
+                                toast.success(`Parallel instances set to ${tempParallelCount}.`);
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                            disabled={isLoading || isReplying}
+                        >
+                            Set Parallel Instances
+                        </Button>
+                    </div>
                 </div>
 
+                <div className="space-y-2">
+                    <label className="text-sm">Show Threads</label>
+                    <div className="grid grid-cols-5 gap-2">
+                        {Array.from({ length: parallelCount }, (_, i) => (
+                            <Button
+                                key={i}
+                                variant={selectedIndexes.includes(i) ? "default" : "outline"}
+                                onClick={() => {
+                                    setSelectedIndexes(prev => {
+                                        if (prev.includes(i)) {
+                                            return prev.filter(p => p !== i);
+                                        } else {
+                                            if (prev.length >= 3) {
+                                                return [...prev.slice(1), i]; // 移除最早的
+                                            } else {
+                                                return [...prev, i];
+                                            }
+                                        }
+                                    });
+                                }}
+                                className="px-2 py-1 text-sm"
+                            >
+                                #{i + 1}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+
+
+                <div className="space-y-2">
+                    <label className="text-sm">Reset Chat Room</label>
+                    <Button
+                        onClick={() => handleResetChatRoom()}
+                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                        disabled={isLoading || isReplying}
+                    >
+                        Reset
+                    </Button>
+                </div>
 
                 <div className="space-y-4">
                     <div className="space-y-2">
@@ -556,10 +731,11 @@ export async function getServerSideProps(
 // --- Eric Components --- //
 
 interface MessageRenderProps {
+    thread: number;
     messages: any;
 }
 
-const MessageRender = ({ messages }: MessageRenderProps) => {
+const MessageRender = ({ thread, messages }: MessageRenderProps) => {
 
     const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
         if (!requestTime || !responseStartTime) return "-";
@@ -576,6 +752,9 @@ const MessageRender = ({ messages }: MessageRenderProps) => {
 
     return (
         <div className="">
+            <div className="flex items-center justify-between px-4 text-sm text-zinc-500 font-semibold mb-1">
+                Thread #{thread}
+            </div>
             {
                 messages.map((message: any, index: any) => (
                     <motion.div
