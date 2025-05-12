@@ -82,8 +82,8 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 
 	// console.log(data, data?.domains[0]?.host, data?.deployments?.[data.deployments.length - 1]?.deploymentId)
 
-	// const site = `http${data?.domains[0]?.https && 's'}://${data?.domains[0]?.host}`
-	const site = "http://example-server.uv-moore.test.unieai.com"
+	const site = `http${data?.domains[0]?.https && 's'}://${data?.domains[0]?.host}`
+	// const site = "http://example-server.uv-moore.test.unieai.com"
 	const screenshotUrl = `/api/screenshot?url=${encodeURIComponent(site)}`;
 
 	useEffect(() => {
