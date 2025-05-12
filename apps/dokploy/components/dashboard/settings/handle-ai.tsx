@@ -53,6 +53,7 @@ export const HandleAi = ({ aiId }: Props) => {
 	const utils = api.useUtils();
 	const [error, setError] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
+	const [unieai, setUnieai] = useState(false);
 	const { data, refetch } = api.ai.one.useQuery(
 		{
 			aiId: aiId || "",
@@ -106,6 +107,11 @@ export const HandleAi = ({ aiId }: Props) => {
 	useEffect(() => {
 		const apiUrl = form.watch("apiUrl");
 		const apiKey = form.watch("apiKey");
+
+		if (apiUrl.includes('.unieai.com/v1')) {
+			setUnieai(true)
+		}
+
 		if (apiUrl && apiKey) {
 			form.setValue("model", "");
 		}
@@ -113,6 +119,7 @@ export const HandleAi = ({ aiId }: Props) => {
 
 	const onSubmit = async (data: Schema) => {
 		try {
+			// 檢查api key
 			await mutateAsync({
 				...data,
 				aiId: aiId || "",
@@ -198,7 +205,20 @@ export const HandleAi = ({ aiId }: Props) => {
 								<FormItem>
 									<FormLabel>API Key</FormLabel>
 									<FormControl>
-										<Input type="password" placeholder="sk-..." {...field} />
+
+										{unieai ? (
+											<div className="flex justify-between gap-2">
+												<Input type="password" placeholder="sk-..." {...field} />
+												<Button variant={"ghost"}  className="cursor-pointer space-x-1 text-sm">
+													<PlusIcon className="h-3 w-3" />
+													Gen Key
+												</Button>
+											</div>
+										) : (
+											<Input type="password" placeholder="sk-..." {...field} />
+										)}
+
+
 									</FormControl>
 									<FormDescription>
 										Your API key for authentication

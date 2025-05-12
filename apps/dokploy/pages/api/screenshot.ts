@@ -52,7 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
+    // await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const buffer = await page.screenshot({ type: 'png' });
     await browser.close();

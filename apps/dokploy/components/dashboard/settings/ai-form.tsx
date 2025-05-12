@@ -19,6 +19,8 @@ export const AiForm = () => {
 	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
 	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
 
+	console.log(aiConfigs)
+
 	return (
 		<div className="w-full">
 			<Card className="h-full bg-sidebar  p-2.5 rounded-xl  max-w-5xl mx-auto">
@@ -31,7 +33,12 @@ export const AiForm = () => {
 							</CardTitle>
 							<CardDescription>Manage your AI configurations</CardDescription>
 						</div>
-						{aiConfigs && aiConfigs?.length > 0 && <HandleAi />}
+						{aiConfigs && aiConfigs?.length > 0 && (
+						<div className="flex gap-3">
+						<HandleAi />
+						<HandleLocalAi />
+						</div>)}
+						
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
 						{isLoading ? (
