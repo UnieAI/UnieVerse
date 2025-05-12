@@ -53,7 +53,8 @@ const Page = () => {
     // sk-ZpMqU0NAXCmiwYF_krHGFjN5kmmlhc1BBcYuYZO2NKcBh-l1l4NZb6MGusI
     const [apiToken, setApiToken] = useState<string>("sk-XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc");
     const [models, setModels] = useState<any>([]);
-    const [model, setModel] = useState<string>("");
+    const [model, setModel] = useState<string>(""); // 預設 model
+    const [threadModels, setThreadModels] = useState<string[]>([]); // 每個 thread 可選自己的 model
 
     // 嘗試取得前端瀏覽器最大併發數量
     const [maxConcurrency, setMaxConcurrency] = useState(0);
@@ -186,10 +187,11 @@ const Page = () => {
             return;
         }
 
-        if (model === "") {
-            toast.error("Invalid model.");
+        if (threadModels.some(m => m === "") && model === "") {
+            toast.error("At least one thread has no model selected, and no default model is set.");
             return;
         }
+
 
         if (isLoading || isReplying) {
             toast.error("Wait for loading or replying...");
@@ -248,7 +250,7 @@ const Page = () => {
                         : history;
 
                     const payload = JSON.stringify({
-                        model,
+                        model: threadModels[index] || model,
                         messages,
                         ...modelParams,
                         stream: true,
@@ -410,6 +412,29 @@ const Page = () => {
         setMessage('');
         setIsLoading(false);
         setIsReplying(false);
+
+        // 預設選擇 index [0,1,2] (最多 3 個)
+        setSelectedIndexes(
+            Array.from({ length: Math.min(3, parallelCount) }, (_, i) => i)
+        );
+
+        setThreadModels((prev) => {
+            const updated = [...prev];
+
+            // 補足長度
+            while (updated.length < parallelCount) {
+                updated.push("");
+            }
+
+            // 清除不存在於 models 的值
+            for (let i = 0; i < updated.length; i++) {
+                if (updated[i] && !models.includes(updated[i])) {
+                    updated[i] = "";
+                }
+            }
+
+            return updated;
+        });
     };
 
     useEffect(() => {
@@ -420,33 +445,16 @@ const Page = () => {
         if (!isLoading && !isReplying) testConcurrency();
 
         handleResetChatRoom();
-
-        // 預設選擇 index [0,1,2] (最多 3 個)
-        setSelectedIndexes(
-            Array.from({ length: Math.min(3, parallelCount) }, (_, i) => i)
-        );
     }, [parallelCount]);
 
     return (
         <div className="flex h-[90vh] gap-4 w-full overflow-hide">
             <div className="w-full flex flex-col flex-1 border-zinc-200 dark:border-zinc-800 p-4">
                 <div className="flex flex-1 flex-row scrollbar-hide overflow-y-auto">
-                    {/* {parallelMessages.map((msgs: any, index: any) => (
-                        <>
-                            <div className="relative flex-1 p-4 overflow-y-auto">
-                                <MessageRender key={index} messages={msgs} />
-                            </div>
-                            {
-                                index < parallelMessages.length - 1 && (
-                                    <div className="w-px bg-gray-300" />
-                                )
-                            }
-                        </>
-                    ))} */}
                     {selectedIndexes.map((index, idx) => (
                         <React.Fragment key={index}>
                             <div className="relative flex-1 p-4 scrollbar-hide overflow-y-auto">
-                                <MessageRender thread={index + 1} messages={parallelMessages[index] || []} />
+                                <MessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={model} models={models} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
                                 <div className="w-px bg-gray-300" />
@@ -532,7 +540,7 @@ const Page = () => {
 
                 {/* Select model */}
                 <div className="space-y-2">
-                    <label className="text-sm">Select Model</label>
+                    <label className="text-sm">Select Default Model</label>
                     <select
                         className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                         value={model}
@@ -820,15 +828,34 @@ export async function getServerSideProps(
 interface MessageRenderProps {
     thread: number;
     messages: any;
+    threadModels: any;
+    setThreadModels: any;
+    model: any;
+    models: any;
 }
 
-const MessageRender = ({ thread, messages }: MessageRenderProps) => {
+const MessageRender = ({ thread, messages, threadModels, setThreadModels, model, models }: MessageRenderProps) => {
 
     return (
         <>
-            <div className="flex items-center justify-between px-4 text-sm text-zinc-500 font-semibold mb-1">
-                Thread #{thread}
+            <div className="flex flex-row items-center justify-between px-4 text-sm text-zinc-500 font-semibold mb-1">
+                <div>Thread #{thread}</div>
+                <select
+                    value={threadModels[thread - 1] || ""}
+                    onChange={(e) => {
+                        const newModels = [...threadModels];
+                        newModels[thread - 1] = e.target.value;
+                        setThreadModels(newModels);
+                    }}
+                    className="text-sm border border-zinc-300 rounded-md p-1 bg-white dark:bg-zinc-950"
+                >
+                    <option value="">(Default: {model || "none"})</option>
+                    {models.map((id: string) => (
+                        <option key={id} value={id}>{id}</option>
+                    ))}
+                </select>
             </div>
+
             {
                 messages.map((message: any, index: any) => (
                     <motion.div
