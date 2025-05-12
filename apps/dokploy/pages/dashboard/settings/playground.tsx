@@ -618,7 +618,7 @@ const Page = () => {
                                         }
                                     `}
                                 >
-                                    <div className="font-bold">Thread #{index + 1}</div>
+                                    <div className="text-sm">Thread #{index + 1}</div>
                                     {last && (
                                         <>
                                             {last.durationMs != null && (
