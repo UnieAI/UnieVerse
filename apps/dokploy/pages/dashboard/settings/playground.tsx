@@ -770,14 +770,8 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
                             </div>
                         )}
                         <div
-                            className={`px-4 py-2 max-w-[80%]`}
+                            className={`px-4 py-2 max-w-[80%] ${(message.role === 'user') && "bg-zinc-200 dark:bg-zinc-600"}`}
                             style={{
-                                backgroundColor: message.role === 'user'
-                                    ? (document.documentElement.classList.contains('dark') ? '#52525b' : '#e4e4e7')
-                                    : '',
-                                color: message.role === 'user'
-                                    ? ''
-                                    : 'white',
                                 borderRadius: '0.5rem',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
