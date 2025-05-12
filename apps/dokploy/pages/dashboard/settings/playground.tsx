@@ -413,6 +413,10 @@ const Page = () => {
     };
 
     useEffect(() => {
+        if (!isLoading && !isReplying) handleRefreshModels();
+    }, []);
+
+    useEffect(() => {
         if (!isLoading && !isReplying) testConcurrency();
 
         handleResetChatRoom();
@@ -921,7 +925,7 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
                     {message.durationMs != null && (
                         <div>
                             <span>Total time: </span>
-                            <span className="text-sm">{(message.durationMs/1000).toFixed(2)}</span>
+                            <span className="text-sm">{(message.durationMs / 1000).toFixed(2)}</span>
                             <span className="ml-1">sec</span>
                         </div>
                     )}
@@ -1289,7 +1293,7 @@ const UnieAISVG = (
 const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
     if (!requestTime || !responseStartTime) return "-";
     const waitMs = new Date(responseStartTime).getTime() - new Date(requestTime).getTime();
-    return `${waitMs/1000} sec`;
+    return `${waitMs / 1000} sec`;
 };
 
 

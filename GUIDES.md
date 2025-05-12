@@ -47,3 +47,24 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io
 3. Download the installer
 4. Run the installer and follow the prompts
 5. Start Docker Desktop from the Start menu
+
+安裝 docker
+
+```bash
+nvm use 20.9.0
+```
+```bash
+pnpm i
+```
+```bash
+docker run --name dokploy-redis -p 6379:6379 -d redis
+```
+```bash
+docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=dokploy -p 5432:5432 -d postgres
+```
+```bash
+pnpm server:script
+```
+```bash
+pnpm dokploy:dev
+```
