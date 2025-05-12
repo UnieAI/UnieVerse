@@ -881,7 +881,7 @@ interface MessageTimingDetailProps {
 }
 
 const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <div className="mt-1 text-xs opacity-60 text-left">
@@ -894,19 +894,19 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
 
             {isOpen && (
                 <div className="mt-1 space-y-0.5">
-                    {message.requestTime && (
+                    {/* {message.requestTime && (
                         <div>
                             <span>Send request: </span>
                             <span className="text-sm">{new Date(message.requestTime).toLocaleTimeString()}</span>
                         </div>
-                    )}
+                    )} */}
                     {message.requestTime && message.responseStartTime && (
                         <div>
-                            <span>Wait: </span>
+                            <span>TTFT: </span>
                             <span className="text-sm">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
                         </div>
                     )}
-                    {message.responseStartTime && (
+                    {/* {message.responseStartTime && (
                         <div>
                             <span>Get first response: </span>
                             <span className="text-sm">{new Date(message.responseStartTime).toLocaleTimeString()}</span>
@@ -917,16 +917,17 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
                             <span>Get last response: </span>
                             <span className="text-sm">{new Date(message.responseEndTime).toLocaleTimeString()}</span>
                         </div>
-                    )}
+                    )} */}
                     {message.durationMs != null && (
                         <div>
-                            <span>Streaming time: </span>
-                            <span className="text-sm">{message.durationMs.toFixed(0)}</span>
-                            <span className="ml-1">ms</span>
+                            <span>Total time: </span>
+                            <span className="text-sm">{(message.durationMs/1000).toFixed(2)}</span>
+                            <span className="ml-1">sec</span>
                         </div>
                     )}
                     {message.durationMs != null && (
                         <div>
+                            <span>TPS: </span>
                             <span className="text-sm">
                                 {calculateCharsPerSecond(message.content, message.durationMs)}
                             </span>
@@ -1288,7 +1289,7 @@ const UnieAISVG = (
 const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
     if (!requestTime || !responseStartTime) return "-";
     const waitMs = new Date(responseStartTime).getTime() - new Date(requestTime).getTime();
-    return `${waitMs} ms`;
+    return `${waitMs/1000} sec`;
 };
 
 
