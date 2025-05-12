@@ -14,9 +14,11 @@ import { Clock, ExternalLinkIcon, KeyIcon, Tag, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AddApiKey } from "./add-api-key";
+import { useTranslation } from "next-i18next";
 
 export const ShowApiKeys = () => {
 	const { data, refetch } = api.user.get.useQuery();
+	const { t } = useTranslation("settings");
 	const { mutateAsync: deleteApiKey, isLoading: isLoadingDelete } =
 		api.user.deleteApiKey.useMutation();
 
@@ -31,7 +33,7 @@ export const ShowApiKeys = () => {
 								API/CLI Keys
 							</CardTitle>
 							<CardDescription>
-								Generate and manage API keys to access the API/CLI
+								{t("setting.profile.generateAPIkey")}
 							</CardDescription>
 						</div>
 						<div className="flex flex-row gap-2 max-sm:flex-wrap items-end">
@@ -43,7 +45,7 @@ export const ShowApiKeys = () => {
 								target="_blank"
 								className="flex flex-row gap-2 items-center"
 							>
-								<span className="text-sm font-medium">View</span>
+								<span className="text-sm font-medium">{t('setting.profile.view')}</span>
 								<ExternalLinkIcon className="size-4" />
 							</Link>
 						</div>
@@ -124,7 +126,7 @@ export const ShowApiKeys = () => {
 								<div className="flex flex-col items-center gap-3 py-6">
 									<KeyIcon className="size-8 text-muted-foreground" />
 									<span className="text-base text-muted-foreground">
-										No API keys found
+										{t('setting.profile.noAPIkeys')}
 									</span>
 								</div>
 							)}

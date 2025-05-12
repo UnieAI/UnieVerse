@@ -33,6 +33,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useTranslation } from "next-i18next";
+
 
 const formSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -84,6 +86,7 @@ export const AddApiKey = () => {
 	const [newApiKey, setNewApiKey] = useState("");
 	const { refetch } = api.user.get.useQuery();
 	const { data: organizations } = api.organization.all.useQuery();
+	const {t} = useTranslation('settings');
 	const createApiKey = api.user.createApiKey.useMutation({
 		onSuccess: (data) => {
 			if (!data) return;
@@ -140,14 +143,13 @@ export const AddApiKey = () => {
 		<>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogTrigger asChild>
-					<Button>Generate New Key</Button>
+					<Button>{t('setting.profile.generateNewKey')}</Button>
 				</DialogTrigger>
 				<DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Generate API Key</DialogTitle>
+						<DialogTitle>{t('setting.profile.generateKey')}</DialogTitle>
 						<DialogDescription>
-							Create a new API key for accessing the API. You can set an
-							expiration date and a custom prefix for better organization.
+							{t('setting.profile.generateKey.descript')}
 						</DialogDescription>
 					</DialogHeader>
 					<Form {...form}>
@@ -157,7 +159,7 @@ export const AddApiKey = () => {
 								name="name"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Name</FormLabel>
+										<FormLabel>{t('setting.profile.generateKey.name')}</FormLabel>
 										<FormControl>
 											<Input placeholder="My API Key" {...field} />
 										</FormControl>
@@ -183,7 +185,7 @@ export const AddApiKey = () => {
 								name="expiresIn"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Expiration</FormLabel>
+										<FormLabel>{t('setting.profile.generateKey.expiration')}</FormLabel>
 										<Select
 											value={field.value?.toString() || "0"}
 											onValueChange={(value) =>
@@ -212,7 +214,7 @@ export const AddApiKey = () => {
 								name="organizationId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Organization</FormLabel>
+										<FormLabel>{t('setting.profile.generateKey.organization')}</FormLabel>
 										<Select value={field.value} onValueChange={field.onChange}>
 											<FormControl>
 												<SelectTrigger>
@@ -234,16 +236,16 @@ export const AddApiKey = () => {
 
 							{/* Rate Limiting Section */}
 							<div className="space-y-4 rounded-lg border p-4">
-								<h3 className="text-lg font-medium">Rate Limiting</h3>
+								<h3 className="text-lg font-medium">{t('setting.profile.generateKey.rateLimit')}</h3>
 								<FormField
 									control={form.control}
 									name="rateLimitEnabled"
 									render={({ field }) => (
 										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
 											<div className="space-y-0.5">
-												<FormLabel>Enable Rate Limiting</FormLabel>
+												<FormLabel>{t('setting.profile.generateKey.rateLimit.enable')}</FormLabel>
 												<FormDescription>
-													Limit the number of requests within a time window
+													{t('setting.profile.generateKey.rateLimit.enable.descript')}
 												</FormDescription>
 											</div>
 											<FormControl>
@@ -263,7 +265,7 @@ export const AddApiKey = () => {
 											name="rateLimitTimeWindow"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Time Window</FormLabel>
+													<FormLabel>{t('setting.profile.generateKey.rateLimit.window')}</FormLabel>
 													<Select
 														value={field.value?.toString()}
 														onValueChange={(value) =>
@@ -287,7 +289,7 @@ export const AddApiKey = () => {
 														</SelectContent>
 													</Select>
 													<FormDescription>
-														The duration in which requests are counted
+														{t('setting.profile.generateKey.rateLimit.window.descript')}
 													</FormDescription>
 													<FormMessage />
 												</FormItem>
@@ -298,7 +300,7 @@ export const AddApiKey = () => {
 											name="rateLimitMax"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Maximum Requests</FormLabel>
+													<FormLabel>{t('setting.profile.generateKey.rateLimit.max')}</FormLabel>
 													<FormControl>
 														<Input
 															type="number"
@@ -314,8 +316,7 @@ export const AddApiKey = () => {
 														/>
 													</FormControl>
 													<FormDescription>
-														Maximum number of requests allowed within the time
-														window
+														{t('setting.profile.generateKey.rateLimit.max.descript')}
 													</FormDescription>
 													<FormMessage />
 												</FormItem>

@@ -21,7 +21,7 @@ const { handler, api } = betterAuth({
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
 	},
-	appName: "Dokploy",
+	appName: "UnieVerse",
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,

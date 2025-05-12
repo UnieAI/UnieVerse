@@ -64,11 +64,25 @@ export const ShowBilling = () => {
 			});
 		}
 	};
+
+	const fakeProduct = {
+		id: "fake-prod-123",
+		name: "Pro Plan (Test)",
+		description: "This is a fake product for testing purposes.",
+		default_price: {
+			recurring: {
+				interval: isAnnual ? "year" : "month",
+			},
+		},
+	};
+
 	const products = data?.products.filter((product) => {
 		// @ts-ignore
 		const interval = product?.default_price?.recurring?.interval;
 		return isAnnual ? interval === "year" : interval === "month";
 	});
+
+	console.log(products)
 
 	const maxServers = admin?.user.serversQuantity ?? 1;
 	const percentage = ((servers ?? 0) / maxServers) * 100;
@@ -118,7 +132,7 @@ export const ShowBilling = () => {
 										</div>
 									)}
 								</div>
-							)}
+							  )} 
 							{/* <div className="flex flex-col gap-1.5 mt-4">
 								<span className="text-base text-primary">
 									Need Help? We are here to help you.

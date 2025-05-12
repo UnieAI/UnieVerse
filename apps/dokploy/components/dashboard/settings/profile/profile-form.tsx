@@ -188,7 +188,7 @@ export const ProfileForm = () => {
 												name="currentPassword"
 												render={({ field }) => (
 													<FormItem>
-														<FormLabel>Current Password</FormLabel>
+														<FormLabel>{t("settings.profile.currentPassword")}</FormLabel>
 														<FormControl>
 															<Input
 																type="password"
@@ -271,7 +271,7 @@ export const ProfileForm = () => {
 													render={({ field }) => (
 														<FormItem className="flex flex-row items-center justify-between p-3 mt-4 border rounded-lg shadow-sm">
 															<div className="space-y-0.5">
-																<FormLabel>Allow Impersonation</FormLabel>
+																<FormLabel>{t('settings.profile.allowImpersonation')}</FormLabel>
 																<FormDescription>
 																	Enable this option to allow UnieVerse™ Cloud
 																	administrators to temporarily access your
