@@ -605,7 +605,7 @@ const Page = () => {
                             return (
                                 <div
                                     key={index}
-                                    className={`p-3 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900
+                                    className={`flex flex-row justify-between p-2 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900
                                         ${last?.state === "complete"
                                             ? "border-green-400 dark:border-green-600"
                                             : last?.state === "streaming"
@@ -618,7 +618,7 @@ const Page = () => {
                                         }
                                     `}
                                 >
-                                    <div className="font-bold mb-1">Thread #{index + 1}</div>
+                                    <div className="font-bold">Thread #{index + 1}</div>
                                     {last && (
                                         <>
                                             {last.durationMs != null && (
