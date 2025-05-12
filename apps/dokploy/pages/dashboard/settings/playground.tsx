@@ -402,7 +402,7 @@ const Page = () => {
                     ))} */}
                     {selectedIndexes.map((index, idx) => (
                         <React.Fragment key={index}>
-                            <div className="relative flex-1 p-4 overflow-y-auto">
+                            <div className="relative flex-1 p-4 scrollbar-hide overflow-y-auto">
                                 <MessageRender thread={index + 1} messages={parallelMessages[index] || []} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
@@ -751,7 +751,7 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
     }
 
     return (
-        <div className="">
+        <>
             <div className="flex items-center justify-between px-4 text-sm text-zinc-500 font-semibold mb-1">
                 Thread #{thread}
             </div>
@@ -784,24 +784,23 @@ const MessageRender = ({ thread, messages }: MessageRenderProps) => {
                             ) : (
                                 <>
                                     <RenderedResult content={message.content} />
+
                                     {/* ✅ 顯示回應時間與耗時 */}
-                                    {message.requestTime && message.responseStartTime && message.responseEndTime && message.durationMs !== undefined && (
-                                        <div className="mt-1 text-xs opacity-60 text-right">
-                                            <div>🕒 Send request: {new Date(message.requestTime).toLocaleTimeString()}</div>
-                                            <div>⏳ Wait: {calculateWaitTime(message.requestTime, message.responseStartTime)}</div>
-                                            <div>🕒 Get first response: {new Date(message.responseStartTime).toLocaleTimeString()}</div>
-                                            <div>🕒 Get last response: {new Date(message.responseEndTime).toLocaleTimeString()}</div>
-                                            <div>⏳ Streaming time: {message.durationMs.toFixed(0)} ms</div>
-                                            <div>Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>
-                                        </div>
-                                    )}
+                                    <div className="mt-1 text-xs opacity-60 text-left">
+                                        {message.requestTime != undefined && <div>🕒 Send request: {new Date(message.requestTime).toLocaleTimeString()}</div>}
+                                        {message.requestTime != undefined && message.responseStartTime != undefined && <div>⏳ Wait: {calculateWaitTime(message.requestTime, message.responseStartTime)}</div>}
+                                        {message.responseStartTime != undefined && <div>🕒 Get first response: {new Date(message.responseStartTime).toLocaleTimeString()}</div>}
+                                        {message.responseEndTime != undefined && <div>🕒 Get last response: {new Date(message.responseEndTime).toLocaleTimeString()}</div>}
+                                        {message.durationMs != undefined && <div>⏳ Streaming time: {message.durationMs.toFixed(0)} ms</div>}
+                                        {message.durationMs != undefined && <div>Chars per second: {calculateCharsPerSecond(message.content, message.durationMs)}</div>}
+                                    </div>
                                 </>
                             )}
                         </div>
                     </motion.div>
                 ))
             }
-        </div>
+        </>
     )
 }
 
