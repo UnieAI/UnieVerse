@@ -1228,7 +1228,7 @@ const TextComponent = ({ text }: { text: string }) => {
 
     const parsedText = parseMarkdown(
         text.split('\n')
-            .filter(line => line.trim() !== '')
+            //.filter(line => line.trim() !== '') // 過濾空行
             .join('\n')
     );
 
