@@ -50,8 +50,8 @@ const Page = () => {
 
     const [isOpenOptions, setIsOpenOptions] = useState(true);
 
-    // https://api2.unieai.com
-    const [apiUrl, setApiUrl] = useState<string>("https://api.exp.unieai.com");
+    // https://api2.unieai.com/v1
+    const [apiUrl, setApiUrl] = useState<string>("https://api.exp.unieai.com/v1");
     // sk-ZpMqU0NAXCmiwYF_krHGFjN5kmmlhc1BBcYuYZO2NKcBh-l1l4NZb6MGusI
     const [apiToken, setApiToken] = useState<string>("sk-XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc");
     const [models, setModels] = useState<any>([]);
@@ -162,7 +162,7 @@ const Page = () => {
 
         try {
             setIsLoading(true);
-            const response = await fetch(`${apiUrl}/v1/models`, {
+            const response = await fetch(`${apiUrl}/models`, {
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": `Bearer ${apiToken}`,
@@ -262,7 +262,7 @@ const Page = () => {
                     // 紀錄開始串流時間
                     const requestTime = new Date().toISOString();
 
-                    const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+                    const response = await fetch(`${apiUrl}/chat/completions`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
