@@ -272,6 +272,11 @@ const Page = () => {
                         signal: controller.signal,
                     });
 
+                    if (!response.ok) {
+                        const errorJson = await response.json();
+                        throw new Error(errorJson.error?.message || "Request failed");
+                    }
+
                     if (!response.body) throw new Error("No response stream");
 
                     const reader = response.body.getReader();
@@ -282,7 +287,12 @@ const Page = () => {
                     setParallelMessages((prev: any) => {
                         const newState = [...prev];
                         const conv = [...newState[index]];
-                        conv[conv.length - 1] = { role: "assistant", content: "", requestTime: requestTime, state: "pending", };
+                        conv[conv.length - 1] = {
+                            role: "assistant",
+                            content: "",
+                            requestTime: requestTime,
+                            state: "pending",
+                        };
                         newState[index] = conv;
                         return newState;
                     });
