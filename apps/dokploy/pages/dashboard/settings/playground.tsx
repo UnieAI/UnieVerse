@@ -612,7 +612,7 @@ const Page = () => {
                                         });
                                     }}
                                     className={`px-2 py-1 text-sm
-                                        bg-transparent hover:bg-zinc-400 hover:dark:bg-zinc-600 text-black dark:text-white
+                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
                                         ${selectedIndexes.includes(index) ? "border-4 border-zinc-500" : "border-2"}
                                         `}
                                 >
@@ -634,7 +634,7 @@ const Page = () => {
                                             key={index}
                                             className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
                                                 px-2 py-1 text-sm flex-1
-                                                bg-transparent hover:bg-zinc-400 hover:dark:bg-zinc-600 text-black dark:text-white
+                                                bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
                                                 ${selectedIndexes.includes(index) ? "border-4" : "border-2"}
                                                 ${last?.state === "complete"
                                                     ? "border-green-400 dark:border-green-600"
@@ -883,7 +883,7 @@ const MessageRender = ({ thread, messages, threadModels, setThreadModels, model,
                         newModels[thread - 1] = e.target.value;
                         setThreadModels(newModels);
                     }}
-                    className="w-36 text-sm border border-zinc-300 rounded-md p-1 bg-white dark:bg-zinc-950"
+                    className="w-36 p-0.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                 >
                     <option value="">(Default: {model || "none"})</option>
                     {models.map((id: string) => (
