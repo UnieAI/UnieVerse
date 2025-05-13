@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Settings2, PanelRight, Send, CircleStop } from 'lucide-react'
+import { PanelRight, Send, CircleStop } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
@@ -450,7 +450,12 @@ const Page = () => {
     }, []);
 
     useEffect(() => {
-        setMaxSelectIndex(isMobile ? 2 : 3);
+        let currentIndex = isMobile ? 2 : 3;
+        setMaxSelectIndex(currentIndex);
+        // 預設選擇 index [0,1,2] (最多 2~3 個)
+        setSelectedIndexes(
+            Array.from({ length: Math.min(currentIndex, parallelCount) }, (_, i) => i)
+        );
     }, [isMobile]);
 
     useEffect(() => {
@@ -517,30 +522,18 @@ const Page = () => {
 
             {/* options */}
             <AnimatePresence>
-                {isOpenOptions ? (
+                {isOpenOptions && (
                     <motion.div
                         key="options-panel"
                         initial={{ x: '100%', opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: 'tween', duration: 0.3 }}
-                        className={`${isMobile ? "w-full" : "w-1/4"} p-4 border-l space-y-6 overflow-auto absolute right-0 top-0 bottom-0 bg-white dark:bg-zinc-900 z-20 shadow-lg`}
+                        className={`${isMobile ? "w-full" : "w-1/4"} p-4 rounded-lg border-l space-y-6 overflow-auto absolute right-0 top-0 bottom-0 bg-white dark:bg-zinc-900 z-20 shadow-lg`}
                     >
-
-
                         {/* Title */}
                         <div className="flex flex-row justify-between items-center">
                             <h3 className="text-lg font-semibold">Options</h3>
-                            <Button
-                                data-sidebar="trigger"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setIsOpenOptions(false)}
-                            >
-                                <PanelRight />
-                                <span className="sr-only">Options Sidebar</span>
-                            </Button>
                         </div>
 
                         {/* LLM api settings */}
@@ -837,21 +830,20 @@ const Page = () => {
                             </div>
                         </div>
                     </motion.div>
-                ) : (
-                    <div className=" absolute -top-4 right-0">
-                        <Button
-                            data-sidebar="trigger"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setIsOpenOptions(true)}
-                        >
-                            <Settings2 />
-                            <span className="sr-only">Options Sidebar</span>
-                        </Button>
-                    </div>
                 )}
             </AnimatePresence>
+            <div className="absolute -top-12 right-0">
+                <Button
+                    data-sidebar="trigger"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setIsOpenOptions(!isOpenOptions)}
+                >
+                    <PanelRight />
+                    <span className="sr-only">Options Sidebar</span>
+                </Button>
+            </div>
         </div>
     );
 };
