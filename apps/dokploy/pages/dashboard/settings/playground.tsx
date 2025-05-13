@@ -365,13 +365,23 @@ const Page = () => {
                             const conv = [...newState[index]];
                             const last = conv[conv.length - 1];
                             if (last.role === "assistant") {
-                                conv[conv.length - 1] = {
-                                    ...last,
-                                    role: "assistant",
-                                    responseEndTime: responseTime.toISOString(),
-                                    state: "abort",
-                                };
-                                newState[index] = conv;
+                                if (last.content === "loading" && last?.loading === true) {
+                                    conv[conv.length - 1] = {
+                                        role: "assistant",
+                                        content: "",
+                                        responseEndTime: responseTime.toISOString(),
+                                        state: "abort",
+                                    };
+                                    newState[index] = conv;
+                                } else {
+                                    conv[conv.length - 1] = {
+                                        ...last,
+                                        role: "assistant",
+                                        responseEndTime: responseTime.toISOString(),
+                                        state: "abort",
+                                    };
+                                    newState[index] = conv;
+                                }
                             }
                             return newState;
                         });
@@ -691,9 +701,15 @@ const Page = () => {
                                             >
                                                 <div className="flex flex-row gap-2">
                                                     <div className="text-sm">#{index + 1}</div>
-                                                    <div className="text-sm">{threadModels[index].length > 10
-                                                        ? threadModels[index].slice(0, 10) + "..."
-                                                        : threadModels[index]}</div>
+                                                    <div className="text-sm">{
+                                                        (() => {
+                                                            const modelName = threadModels[index] || model;
+                                                            return modelName.length > 10
+                                                                ? modelName.slice(0, 10) + "..."
+                                                                : modelName;
+                                                        })()
+                                                    }</div>
+
                                                 </div>
                                                 {last && (
                                                     <>
@@ -981,13 +997,7 @@ const MessageRender = ({ thread, messages, threadModels, setThreadModels, model,
 }
 
 interface MessageTimingDetailProps {
-    message: {
-        requestTime?: string;
-        responseStartTime?: string;
-        responseEndTime?: string;
-        durationMs?: number;
-        content: string;
-    };
+    message: Message;
 }
 
 const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
@@ -1043,6 +1053,23 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
                             </span>
                             <span className="ml-1">chars/sec</span>
                         </div>
+                    )}
+                    {message.state != null && (
+                        <span
+                            className={`opacity-50 
+                            ${message.state === "complete"
+                                    ? "text-green-500"
+                                    : message.state === "streaming"
+                                        ? "text-yellow-500"
+                                        : message.state === "error"
+                                            ? "text-red-500"
+                                            : message.state === "abort"
+                                                ? "text-orange-500"
+                                                : ""}
+                            `}
+                        >
+                            {message.state}
+                        </span>
                     )}
                 </div>
             )}
