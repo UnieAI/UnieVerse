@@ -40,23 +40,23 @@ function formatTimeAgo(createdAt: string | Date): string {
 	return parts.join(" ") + " ago";
 }
 
-const convertImageToBase64 = (url: string): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		const img = new Image();
-		img.crossOrigin = "anonymous";
-		img.onload = () => {
-			const canvas = document.createElement("canvas");
-			canvas.width = img.width;
-			canvas.height = img.height;
-			const ctx = canvas.getContext("2d");
-			if (!ctx) return reject("Canvas context is null");
-			ctx.drawImage(img, 0, 0);
-			resolve(canvas.toDataURL("image/png"));
-		};
-		img.onerror = reject;
-		img.src = url;
-	});
-};
+// const convertImageToBase64 = (url: string): Promise<string> => {
+// 	return new Promise((resolve, reject) => {
+// 		const img = new Image();
+// 		img.crossOrigin = "anonymous";
+// 		img.onload = () => {
+// 			const canvas = document.createElement("canvas");
+// 			canvas.width = img.width;
+// 			canvas.height = img.height;
+// 			const ctx = canvas.getContext("2d");
+// 			if (!ctx) return reject("Canvas context is null");
+// 			ctx.drawImage(img, 0, 0);
+// 			resolve(canvas.toDataURL("image/png"));
+// 		};
+// 		img.onerror = reject;
+// 		img.src = url;
+// 	});
+// };
 
 const statusMap = {
 	idle: { label: "Idle", color: "bg-gray-400" },
@@ -83,7 +83,7 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 	// console.log(data, data?.domains[0]?.host, data?.deployments?.[data.deployments.length - 1]?.deploymentId)
 
 	// const site = `http${data?.domains[0]?.https && 's'}://${data?.domains[0]?.host}`
-	const site = "http://test-n8n-0508fd-18-183-32-128.traefik.me/"
+	const site = "http://roy-grafana-22c7f0-18-183-20-221.traefik.me"
 	const screenshotUrl = `/api/screenshot?url=${encodeURIComponent(site)}`;
 
 	useEffect(() => {
