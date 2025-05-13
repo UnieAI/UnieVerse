@@ -419,11 +419,16 @@ const Page = () => {
         );
 
         setThreadModels((prev) => {
-            const updated = [...prev];
+            let updated = [...prev];
 
             // 補足長度
             while (updated.length < parallelCount) {
                 updated.push("");
+            }
+
+            // 如果長度太長，刪除多餘的值
+            if (updated.length > parallelCount) {
+                updated = updated.slice(0, parallelCount);
             }
 
             // 清除不存在於 models 的值
@@ -448,12 +453,12 @@ const Page = () => {
     }, [parallelCount]);
 
     return (
-        <div className="flex h-[90vh] gap-4 w-full overflow-hide">
-            <div className="w-full flex flex-col flex-1 border-zinc-200 dark:border-zinc-800 p-4">
-                <div className="flex flex-1 flex-row scrollbar-hide overflow-y-auto">
+        <div className="flex h-[90vh] gap-4 w-full overflow-hidden">
+            <div className="w-3/4 flex flex-col border-zinc-200 dark:border-zinc-800 p-4">
+                <div className="flex flex-1 flex-row overflow-y-auto">
                     {selectedIndexes.map((index, idx) => (
                         <React.Fragment key={index}>
-                            <div className="relative flex-1 p-4 scrollbar-hide overflow-y-auto">
+                            <div className="relative flex-1 p-4 overflow-auto">
                                 <MessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={model} models={models} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
@@ -503,278 +508,309 @@ const Page = () => {
                 </div>
             </div>
 
-            {!isMobile && <div className="w-96 p-4 border-l space-y-6 overflow-auto">
+            {/* options */}
+            {!isMobile && (
+                <div className="w-1/4 p-4 border-l space-y-6 overflow-auto">
 
-                <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">options</h3>
-                </div>
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">options</h3>
+                    </div>
 
-                {/* LLM api settings */}
-                <div className="space-y-2">
-                    <label className="text-sm">API URL</label>
-                    <input
-                        type="text"
-                        value={apiUrl}
-                        onChange={(e) => setApiUrl(e.target.value)}
-                        placeholder="https://your-api.com"
-                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                    />
-
-                    <label className="text-sm">API Token</label>
-                    <input
-                        type="password"
-                        value={apiToken}
-                        onChange={(e) => setApiToken(e.target.value)}
-                        placeholder="sk-xxxx"
-                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                    />
-
-                    <Button
-                        onClick={() => handleRefreshModels()}
-                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                        disabled={isLoading || isReplying}
-                    >
-                        Refresh Models
-                    </Button>
-                </div>
-
-                {/* Select model */}
-                <div className="space-y-2">
-                    <label className="text-sm">Select Default Model</label>
-                    <select
-                        className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                    >
-                        <option value="" disabled>Select a model</option>
-                        {models.map((id: string) => (
-                            <option key={id} value={id}>{id}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Parallel instances */}
-                <div className="space-y-2">
-                    <label className="text-sm">Parallel Instances</label>
-                    <div className="flex flex-row gap-2">
+                    {/* LLM api settings */}
+                    <div className="space-y-2">
+                        <label className="text-sm">API URL</label>
                         <input
-                            type="number"
-                            min={1}
-                            max={maxCount}
-                            value={tempParallelCount}
-                            onChange={(e) => setTempParallelCount(Number(e.target.value))}
-                            disabled={isLoading || isReplying}
+                            type="text"
+                            value={apiUrl}
+                            onChange={(e) => setApiUrl(e.target.value)}
+                            placeholder="https://your-api.com"
                             className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
                         />
+
+                        <label className="text-sm">API Token</label>
+                        <input
+                            type="password"
+                            value={apiToken}
+                            onChange={(e) => setApiToken(e.target.value)}
+                            placeholder="sk-xxxx"
+                            className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                        />
+
                         <Button
-                            onClick={() => {
-                                setParallelCount(tempParallelCount);
-                                toast.success(`Parallel instances set to ${tempParallelCount}.`);
-                            }}
+                            onClick={() => handleRefreshModels()}
                             className="w-full bg-blue-600 hover:bg-blue-800 text-white"
                             disabled={isLoading || isReplying}
                         >
-                            Set Parallel Instances
+                            Refresh Models
                         </Button>
                     </div>
-                </div>
 
-                {/* Show thread btn */}
-                <div className="space-y-2">
-                    <label className="text-sm">Show Threads</label>
-                    <div className="grid grid-cols-5 gap-2">
-                        {Array.from({ length: parallelCount }, (_, i) => (
-                            <Button
-                                key={i}
-                                variant={selectedIndexes.includes(i) ? "default" : "outline"}
-                                onClick={() => {
-                                    setSelectedIndexes(prev => {
-                                        if (prev.includes(i)) {
-                                            return prev.filter(p => p !== i);
-                                        } else {
-                                            if (prev.length >= 3) {
-                                                return [...prev.slice(1), i]; // 移除最早的
-                                            } else {
-                                                return [...prev, i];
-                                            }
-                                        }
-                                    });
-                                }}
-                                className="px-2 py-1 text-sm"
-                            >
-                                #{i + 1}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Summary for each thread */}
-                <div className="space-y-2">
-                    <label className="text-sm">Thread Summary (Last Assistant Response)</label>
+                    {/* Select model */}
                     <div className="space-y-2">
-                        {parallelMessages.map((messages, index) => {
-                            const last = [...messages].reverse().find(msg => msg.role === 'assistant');
-                            return (
-                                <div
-                                    key={index}
-                                    className={`flex flex-row justify-between p-2 border rounded-md text-xs bg-zinc-100 dark:bg-zinc-900
-                                        ${last?.state === "complete"
-                                            ? "border-green-400 dark:border-green-600"
-                                            : last?.state === "streaming"
-                                                ? "border-yellow-400 dark:border-yellow-600"
-                                                : last?.state === "error"
-                                                    ? "border-red-400 dark:border-red-600"
-                                                    : last?.state === "abort"
-                                                        ? "border-orange-400 dark:border-orange-600"
-                                                        : "border-zinc-400 dark:border-zinc-600"
-                                        }
-                                    `}
-                                >
-                                    <div className="text-sm">#{index + 1}</div>
-                                    {last && (
-                                        <>
-                                            {last.durationMs != null && (
-                                                <div>
-                                                    <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
-                                                    <span className="text-xs ml-1">chars/sec</span>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Reset chat room btn */}
-                <div className="space-y-2">
-                    <label className="text-sm">Reset Chat Room</label>
-                    <Button
-                        onClick={() => handleResetChatRoom()}
-                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                        disabled={isLoading || isReplying}
-                    >
-                        Reset
-                    </Button>
-                </div>
-
-                {/* LLM api payload */}
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Temperature</label>
-                            <Badge variant="secondary">{modelParams.temperature}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.temperature]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, temperature: value }))}
-                            max={1}
-                            step={0.1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Max Tokens</label>
-                            <Badge variant="secondary">{modelParams.max_tokens}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.max_tokens]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, max_tokens: value }))}
-                            max={8000}
-                            step={1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Top P</label>
-                            <Badge variant="secondary">{modelParams.top_p}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.top_p]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_p: value }))}
-                            max={1}
-                            step={0.1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Top K</label>
-                            <Badge variant="secondary">{modelParams.top_k}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.top_k]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_k: value }))}
-                            max={100}
-                            step={1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Presence Penalty</label>
-                            <Badge variant="secondary">{modelParams.presence_penalty}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.presence_penalty]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, presence_penalty: value }))}
-                            max={2}
-                            step={0.1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <label className="text-sm">Frequency Penalty</label>
-                            <Badge variant="secondary">{modelParams.frequency_penalty}</Badge>
-                        </div>
-                        <Slider
-                            value={[modelParams.frequency_penalty]}
-                            onValueChange={([value]) => setModelParams(prev => ({ ...prev, frequency_penalty: value }))}
-                            max={2}
-                            step={0.1}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm">System Prompt</label>
-                        <AutoResizeTextarea
-                            value={modelParams.system_prompt}
-                            onChange={(e) => setModelParams(prev => ({ ...prev, system_prompt: e.target.value }))}
-                            placeholder={"enter a system prompt..."}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm">Context Length Exceeded Behavior</label>
+                        <label className="text-sm flex flex-col">
+                            <span>Select Default Model</span>
+                            {(threadModels.some(m => m === "") && model === "") && (
+                                <span className="text-red-500">please set default model.</span>
+                            )}
+                        </label>
                         <select
-                            className="w-full mt-1 p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
-                            value={modelParams.context_length_exceeded_behavior}
-                            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                                setModelParams(prev => ({ ...prev, context_length_exceeded_behavior: event.target.value }))
-                            }}
+                            className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                            value={model}
+                            onChange={(e) => setModel(e.target.value)}
                         >
-                            <option value="none">None</option>
-                            <option value="truncate">Truncate</option>
-                            <option value="error">Error</option>
+                            <option value="" disabled>Select a model</option>
+                            {models.map((id: string) => (
+                                <option key={id} value={id}>{id}</option>
+                            ))}
                         </select>
                     </div>
 
-                    <div className="flex flex-row items-center gap-2">
-                        <>
-                            <Checkbox
-                                id="echo"
-                                checked={modelParams.echo}
-                                onCheckedChange={(checked) => setModelParams(prev => ({ ...prev, echo: checked as boolean }))}
+                    {/* Parallel instances */}
+                    <div className="space-y-2">
+                        <label className="text-sm">Parallel Instances</label>
+                        <div className="flex flex-row gap-2">
+                            <input
+                                type="number"
+                                min={1}
+                                max={maxCount}
+                                value={tempParallelCount}
+                                onChange={(e) => setTempParallelCount(Number(e.target.value))}
+                                disabled={isLoading || isReplying}
+                                className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
                             />
-                            <label htmlFor="echo" className="text-sm">Echo</label>
-                        </>
+                            <Button
+                                onClick={() => {
+                                    setParallelCount(tempParallelCount);
+                                    toast.success(`Parallel instances set to ${tempParallelCount}.`);
+                                }}
+                                className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                disabled={isLoading || isReplying}
+                            >
+                                Set Parallel Instances
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Show thread btn */}
+                    <div className="space-y-2">
+                        <label className="text-sm">Show Threads</label>
+                        <div className="grid grid-cols-5 gap-2">
+                            {Array.from({ length: parallelCount }, (_, index) => (
+                                <Button
+                                    key={index}
+                                    onClick={() => {
+                                        setSelectedIndexes(prev => {
+                                            if (prev.includes(index)) {
+                                                return prev.filter(p => p !== index);
+                                            } else {
+                                                if (prev.length >= 3) {
+                                                    return [...prev.slice(1), index]; // 移除最早的
+                                                } else {
+                                                    return [...prev, index];
+                                                }
+                                            }
+                                        });
+                                    }}
+                                    className={`px-2 py-1 text-sm
+                                        bg-transparent hover:bg-zinc-400 hover:dark:bg-zinc-600 text-black dark:text-white
+                                        ${selectedIndexes.includes(index) ? "border-4 border-zinc-500" : "border-2"}
+                                        `}
+                                >
+                                    #{index + 1}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Summary for each thread */}
+                    {(parallelMessages.length > 0) && (
+                        <div className="space-y-2 w-full">
+                            <label className="text-sm">Threads Summary (Last Assistant Response)</label>
+                            <div className="space-y-2 w-full">
+                                {parallelMessages.map((messages, index) => {
+                                    const last = [...messages].reverse().find(msg => msg.role === 'assistant');
+                                    return (
+                                        <Button
+                                            key={index}
+                                            className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
+                                                px-2 py-1 text-sm flex-1
+                                                bg-transparent hover:bg-zinc-400 hover:dark:bg-zinc-600 text-black dark:text-white
+                                                ${selectedIndexes.includes(index) ? "border-4" : "border-2"}
+                                                ${last?.state === "complete"
+                                                    ? "border-green-400 dark:border-green-600"
+                                                    : last?.state === "streaming"
+                                                        ? "border-yellow-400 dark:border-yellow-600"
+                                                        : last?.state === "error"
+                                                            ? "border-red-400 dark:border-red-600"
+                                                            : last?.state === "abort"
+                                                                ? "border-orange-400 dark:border-orange-600"
+                                                                : "border-zinc-400 dark:border-zinc-600"}`}
+                                            onClick={() => {
+                                                setSelectedIndexes(prev => {
+                                                    if (prev.includes(index)) {
+                                                        return prev.filter(p => p !== index);
+                                                    } else {
+                                                        if (prev.length >= 3) {
+                                                            return [...prev.slice(1), index]; // 移除最早的
+                                                        } else {
+                                                            return [...prev, index];
+                                                        }
+                                                    }
+                                                });
+                                            }}
+                                        >
+                                            <div className="flex flex-row gap-2">
+                                                <div className="text-sm">#{index + 1}</div>
+                                                <div className="text-sm">{threadModels[index].length > 10
+                                                    ? threadModels[index].slice(0, 10) + "..."
+                                                    : threadModels[index]}</div>
+                                            </div>
+                                            {last && (
+                                                <>
+                                                    {last.durationMs != null && (
+                                                        <div>
+                                                            <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
+                                                            <span className="text-xs ml-1">chars/sec</span>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Reset chat room btn */}
+                    <div className="space-y-2">
+                        <label className="text-sm">Reset Chat Room</label>
+                        <Button
+                            onClick={() => handleResetChatRoom()}
+                            className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                            disabled={isLoading || isReplying}
+                        >
+                            Reset
+                        </Button>
+                    </div>
+
+                    {/* LLM api payload */}
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Temperature</label>
+                                <Badge variant="secondary">{modelParams.temperature}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.temperature]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, temperature: value }))}
+                                max={1}
+                                step={0.1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Max Tokens</label>
+                                <Badge variant="secondary">{modelParams.max_tokens}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.max_tokens]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, max_tokens: value }))}
+                                max={8000}
+                                step={1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Top P</label>
+                                <Badge variant="secondary">{modelParams.top_p}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.top_p]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_p: value }))}
+                                max={1}
+                                step={0.1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Top K</label>
+                                <Badge variant="secondary">{modelParams.top_k}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.top_k]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_k: value }))}
+                                max={100}
+                                step={1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Presence Penalty</label>
+                                <Badge variant="secondary">{modelParams.presence_penalty}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.presence_penalty]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, presence_penalty: value }))}
+                                max={2}
+                                step={0.1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <label className="text-sm">Frequency Penalty</label>
+                                <Badge variant="secondary">{modelParams.frequency_penalty}</Badge>
+                            </div>
+                            <Slider
+                                value={[modelParams.frequency_penalty]}
+                                onValueChange={([value]) => setModelParams(prev => ({ ...prev, frequency_penalty: value }))}
+                                max={2}
+                                step={0.1}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm">System Prompt</label>
+                            <AutoResizeTextarea
+                                value={modelParams.system_prompt}
+                                onChange={(e) => setModelParams(prev => ({ ...prev, system_prompt: e.target.value }))}
+                                placeholder={"enter a system prompt..."}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm">Context Length Exceeded Behavior</label>
+                            <select
+                                className="w-full mt-1 p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                                value={modelParams.context_length_exceeded_behavior}
+                                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                                    setModelParams(prev => ({ ...prev, context_length_exceeded_behavior: event.target.value }))
+                                }}
+                            >
+                                <option value="none">None</option>
+                                <option value="truncate">Truncate</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-row items-center gap-2">
+                            <>
+                                <Checkbox
+                                    id="echo"
+                                    checked={modelParams.echo}
+                                    onCheckedChange={(checked) => setModelParams(prev => ({ ...prev, echo: checked as boolean }))}
+                                />
+                                <label htmlFor="echo" className="text-sm">Echo</label>
+                            </>
+                        </div>
                     </div>
                 </div>
-            </div>}
+            )}
         </div>
     );
 };
@@ -838,8 +874,8 @@ const MessageRender = ({ thread, messages, threadModels, setThreadModels, model,
 
     return (
         <>
-            <div className="flex flex-row items-center justify-between px-4 text-sm text-zinc-500 font-semibold mb-1">
-                <div>Thread #{thread}</div>
+            <div className="flex flex-row items-start justify-between gap-6 px-4 text-sm text-zinc-500 font-semibold mb-1">
+                <div>#{thread}</div>
                 <select
                     value={threadModels[thread - 1] || ""}
                     onChange={(e) => {
@@ -847,7 +883,7 @@ const MessageRender = ({ thread, messages, threadModels, setThreadModels, model,
                         newModels[thread - 1] = e.target.value;
                         setThreadModels(newModels);
                     }}
-                    className="text-sm border border-zinc-300 rounded-md p-1 bg-white dark:bg-zinc-950"
+                    className="w-36 text-sm border border-zinc-300 rounded-md p-1 bg-white dark:bg-zinc-950"
                 >
                     <option value="">(Default: {model || "none"})</option>
                     {models.map((id: string) => (
