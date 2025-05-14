@@ -36,7 +36,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { useUnieInfraToken } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
+import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
 import { useUnieInfraTokens } from "@/utils/unieai/unieinfra/token/use-unieInfraTokens";
 
 const Schema = z.object({
@@ -55,7 +55,7 @@ interface Props {
 
 export const HandleAi = ({ aiId }: Props) => {
 
-	const { accessToken } = useUnieInfraToken();
+	const { accessToken } = useUnieInfraAccessToken();
 	const { tokens, setTokensByAccessToken, isLoadingTokens } = useUnieInfraTokens();
 
 	const utils = api.useUtils();

@@ -24,7 +24,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
-import { useUnieInfraToken } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
+import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
 import { LinkUnieInfra } from "@/utils/unieai/unieinfra/user/LoginUnieInfra";
 
 const _AUTO_CHECK_UPDATES_INTERVAL_MINUTES = 7;
@@ -35,7 +35,7 @@ export const UserNav = () => {
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const { locale, setLocale } = useLocale();
-	const { updateAccessToken } = useUnieInfraToken();
+	const { updateAccessToken } = useUnieInfraAccessToken();
 	// const { mutateAsync } = api.auth.logout.useMutation();
 
 	useEffect(() => {

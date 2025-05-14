@@ -5,10 +5,10 @@
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useUnieInfraToken } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
+import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
 
 export const UnieInfraConnectionHintPoint = () => {
-  const { accessToken } = useUnieInfraToken();
+  const { accessToken } = useUnieInfraAccessToken();
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
