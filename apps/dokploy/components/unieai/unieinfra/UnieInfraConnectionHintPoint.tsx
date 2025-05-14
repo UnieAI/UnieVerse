@@ -8,12 +8,12 @@ import { cn } from "@/lib/utils";
 import { useUnieInfraToken } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
 
 export const UnieInfraConnectionHintPoint = () => {
-  const { token } = useUnieInfraToken();
+  const { accessToken } = useUnieInfraToken();
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    setConnected(token !== null);
-  }, [token]);
+    setConnected(accessToken !== null);
+  }, [accessToken]);
 
   return (
     <TooltipProvider>

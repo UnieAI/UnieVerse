@@ -18,6 +18,8 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -26,14 +28,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PenBoxIcon, PlusIcon } from "lucide-react";
+import { PenBoxIcon, PlusIcon, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+
+import { useUnieInfraToken } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
+import { useUnieInfraTokens } from "@/utils/unieai/unieinfra/token/use-unieInfraTokens";
 
 const Schema = z.object({
 	name: z.string().min(1, { message: "Name is required" }),
@@ -50,10 +54,17 @@ interface Props {
 }
 
 export const HandleAi = ({ aiId }: Props) => {
+
+	const { accessToken } = useUnieInfraToken();
+	const { tokens, setTokensByAccessToken, isLoadingTokens } = useUnieInfraTokens();
+
 	const utils = api.useUtils();
 	const [error, setError] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
-	const [unieai, setUnieai] = useState(false);
+
+	const UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
+	const [useUnieInfra, setUseUnieInfra] = useState<boolean>(false);
+
 	const { data, refetch } = api.ai.one.useQuery(
 		{
 			aiId: aiId || "",
@@ -108,14 +119,23 @@ export const HandleAi = ({ aiId }: Props) => {
 		const apiUrl = form.watch("apiUrl");
 		const apiKey = form.watch("apiKey");
 
-		if (apiUrl.includes('.unieai.com/v1')) {
-			setUnieai(true)
-		}
-
 		if (apiUrl && apiKey) {
 			form.setValue("model", "");
 		}
 	}, [form.watch("apiUrl"), form.watch("apiKey")]);
+
+	useEffect(() => {
+		const fetchUnieInfra = async () => {
+			form.setValue("apiUrl", UNIEINFRA_API_URL!);
+			if (tokens.length === 0 && accessToken !== null) {
+				await setTokensByAccessToken(accessToken);
+			}
+		};
+
+		if (useUnieInfra) fetchUnieInfra();
+		else form.setValue("apiKey", "");
+	}, [useUnieInfra]);
+
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -186,12 +206,40 @@ export const HandleAi = ({ aiId }: Props) => {
 							name="apiUrl"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>API URL1</FormLabel>
+									<FormLabel>
+										<div className="flex flex-row justify-between gap-2">
+											<span>API URL</span>
+											<div className="flex items-center gap-1">
+												{/* <Checkbox
+													checked={useUnieInfra}
+													onCheckedChange={(checked) => setUseUnieInfra(checked as boolean)}
+													disabled={UNIEINFRA_API_URL === undefined}
+												/> */}
+
+												<Switch
+													checked={useUnieInfra}
+													onCheckedChange={(checked) => setUseUnieInfra(checked)}
+													disabled={!UNIEINFRA_API_URL}
+												/>
+												Use UnieInfra API
+											</div>
+										</div>
+									</FormLabel>
 									<FormControl>
-										<Input placeholder="https://api.openai.com/v1" {...field} />
+										{!useUnieInfra && (
+											<Input
+												{...field}
+												disabled={useUnieInfra}
+												placeholder={UNIEINFRA_API_URL || "https://api.openai.com/v1"}
+											/>
+										)}
 									</FormControl>
 									<FormDescription>
-										The base URL for your AI provider's API
+										{useUnieInfra ? (
+											"API URL is base UnieInfra"
+										) : (
+											"The base URL for your AI provider's API"
+										)}
 									</FormDescription>
 									<FormMessage />
 								</FormItem>
@@ -205,23 +253,55 @@ export const HandleAi = ({ aiId }: Props) => {
 								<FormItem>
 									<FormLabel>API Key</FormLabel>
 									<FormControl>
-
-										{unieai ? (
-											<div className="flex justify-between gap-2">
-												<Input type="password" placeholder="sk-..." {...field} />
-												<Button variant={"ghost"}  className="cursor-pointer space-x-1 text-sm">
-													<PlusIcon className="h-3 w-3" />
-													Gen Key
+										{useUnieInfra ? (
+											<div className="flex flex-row justify-between gap-2">
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<FormControl>
+														<SelectTrigger className="w-[240px]">
+															<SelectValue placeholder="Select a token" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														{tokens.map((token: any) => (
+															<SelectItem
+																key={token.id}
+																value={`sk-${token.key}`}
+															>
+																{token.name}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													disabled={isLoadingTokens}
+													onClick={async () => {
+														if (accessToken) {
+															await setTokensByAccessToken(accessToken);
+															toast.success("Tokens refreshed");
+														} else {
+															toast.error("No access token available");
+														}
+													}}
+												>
+													<RefreshCw />
 												</Button>
 											</div>
 										) : (
 											<Input type="password" placeholder="sk-..." {...field} />
 										)}
-
-
 									</FormControl>
 									<FormDescription>
-										Your API key for authentication
+										{useUnieInfra ? (
+											"Your UnieInfra API key for authentication"
+										) : (
+											"Your API key for authentication"
+										)}
 									</FormDescription>
 									<FormMessage />
 								</FormItem>
