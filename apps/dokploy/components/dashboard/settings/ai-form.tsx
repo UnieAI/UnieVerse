@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,15 @@ export const AiForm = () => {
 	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
 	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
 
+	const [openHandleUnieInfra, setOpenHandleUnieInfra] = useState<boolean>(false);
+	const [openHandleAi, setOpenHandleAi] = useState<boolean>(false);
+
 	console.log(aiConfigs)
+
+	const GenToken = () => {
+		setOpenHandleUnieInfra(true);
+		setOpenHandleAi(false);
+	}
 
 	return (
 		<div className="w-full">
@@ -35,12 +44,12 @@ export const AiForm = () => {
 							<CardDescription>Manage your AI configurations</CardDescription>
 						</div>
 						{aiConfigs && aiConfigs?.length > 0 && (
-						<div className="flex gap-3">
-							<HandleUnieInfra />
-						<HandleAi />
-						<HandleLocalAi />
-						</div>)}
-						
+							<div className="flex gap-3">
+								<HandleUnieInfra open={openHandleUnieInfra} setOpen={setOpenHandleUnieInfra} />
+								<HandleAi open={openHandleAi} setOpen={setOpenHandleAi} GenToken={GenToken} />
+								<HandleLocalAi />
+							</div>)}
+
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
 						{isLoading ? (
@@ -57,8 +66,8 @@ export const AiForm = () => {
 											You don't have any AI configurations
 										</span>
 										<div className="flex gap-3">
-											<HandleUnieInfra />
-											<HandleAi />
+											<HandleUnieInfra open={openHandleUnieInfra} setOpen={setOpenHandleUnieInfra} />
+											<HandleAi open={openHandleAi} setOpen={setOpenHandleAi} GenToken={GenToken} />
 											<HandleLocalAi />
 										</div>
 									</div>
@@ -77,7 +86,7 @@ export const AiForm = () => {
 														<CardDescription>{config.model}</CardDescription>
 													</div>
 													<div className="flex justify-between items-center">
-														<HandleAi aiId={config.aiId} />
+														<HandleAi open={openHandleAi} setOpen={setOpenHandleAi} GenToken={GenToken} aiId={config.aiId} />
 														<DialogAction
 															title="Delete AI"
 															description="Are you sure you want to delete this AI?"

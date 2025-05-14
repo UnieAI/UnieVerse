@@ -50,18 +50,20 @@ const Schema = z.object({
 
 type Schema = z.infer<typeof Schema>;
 
-interface Props {
+interface HandleAiProps {
+	open: boolean;
+	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+	GenToken: () => void;
 	aiId?: string;
 }
 
-export const HandleAi = ({ aiId }: Props) => {
+export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 
 	const { accessToken } = useUnieInfraAccessToken();
 	const { tokens, setTokensByAccessToken, isLoadingTokens } = useUnieInfraTokens();
 
 	const utils = api.useUtils();
 	const [error, setError] = useState<string | null>(null);
-	const [open, setOpen] = useState(false);
 
 	const UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
 	const [useUnieInfra, setUseUnieInfra] = useState<boolean>(false);
@@ -261,16 +263,15 @@ export const HandleAi = ({ aiId }: Props) => {
 														variant="ghost"
 														size="sm"
 														disabled={isLoadingTokens}
-														onClick={async () => {
+														onClick={() => {
 															if (accessToken) {
-																await setTokensByAccessToken(accessToken);
-																toast.success("Tokens refreshed");
+																GenToken();
 															} else {
 																toast.error("No access token available");
 															}
 														}}
 													>
-														Gen key
+														Gen Token
 														<Sparkles />
 													</Button>
 												) : (

@@ -52,7 +52,11 @@ const Schema = z.object({
 
 type Schema = z.infer<typeof Schema>;
 
-export const HandleUnieInfra = () => {
+interface HandleUnieInfraProps {
+	open: boolean;
+	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 
 	const { data } = api.user.get.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -61,7 +65,6 @@ export const HandleUnieInfra = () => {
 	const { groups, setGroupsByAccessToken, isLoadingGroups } = useUnieInfraGroups();
 
 	const [error, setError] = useState<string | null>(null);
-	const [open, setOpen] = useState<boolean>(false);
 
 	const [neverExpires, setNeverExpires] = useState<boolean>(true);
 	const [unlimitedQuota, setUnlimitedQuota] = useState<boolean>(false);
