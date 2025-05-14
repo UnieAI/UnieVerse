@@ -186,7 +186,7 @@ export const HandleAi = ({ aiId }: Props) => {
 							name="apiUrl"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>API URL</FormLabel>
+									<FormLabel>API URL1</FormLabel>
 									<FormControl>
 										<Input placeholder="https://api.openai.com/v1" {...field} />
 									</FormControl>

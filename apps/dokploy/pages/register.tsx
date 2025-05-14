@@ -34,29 +34,28 @@ const registerSchema = z
 			.min(1, {
 				message: "Email is required",
 			})
+			.max(80, {
+				message: "Email must be at most 80 characters",
+			})
 			.email({
 				message: "Email must be a valid email",
 			}),
 		password: z
 			.string()
-			.min(1, {
-				message: "Password is required",
-			})
-			.refine((password) => password === "" || password.length >= 8, {
+			.min(8, {
 				message: "Password must be at least 8 characters",
+			})
+			.max(80, {
+				message: "Password must be at most 80 characters",
 			}),
 		confirmPassword: z
 			.string()
-			.min(1, {
-				message: "Password is required",
+			.min(8, {
+				message: "Password must be at least 8 characters",
 			})
-			.refine(
-				(confirmPassword) =>
-					confirmPassword === "" || confirmPassword.length >= 8,
-				{
-					message: "Password must be at least 8 characters",
-				},
-			),
+			.max(80, {
+				message: "Password must be at most 80 characters",
+			}),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
 		message: "Passwords do not match",
@@ -122,7 +121,7 @@ const Register = ({ isCloud }: Props) => {
 							className="flex flex-row items-center gap-2"
 						>
 							{/* <Logo className="size-12" /> */}
-							<img src="/icon.png" className="size-12"/>
+							<img src="/icon.png" className="size-12" />
 						</Link>
 						{isCloud ? "Sign Up" : "Setup the server"}
 					</CardTitle>
@@ -174,7 +173,7 @@ const Register = ({ isCloud }: Props) => {
 												<FormItem>
 													<FormLabel>Email</FormLabel>
 													<FormControl>
-														<Input placeholder="email@dokploy.com" {...field} />
+														<Input placeholder="email@unieai.com" {...field} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>

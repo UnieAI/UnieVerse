@@ -19,10 +19,12 @@ import { authClient } from "@/lib/auth-client";
 import { Languages } from "@/lib/languages";
 import { api } from "@/utils/api";
 import useLocale from "@/utils/hooks/use-locale";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
+import { LinkUnieInfra } from "@/utils/unieai/unieinfra/user/use-unieInfraToken";
 
 const _AUTO_CHECK_UPDATES_INTERVAL_MINUTES = 7;
 
@@ -33,6 +35,14 @@ export const UserNav = () => {
 
 	const { locale, setLocale } = useLocale();
 	// const { mutateAsync } = api.auth.logout.useMutation();
+
+	useEffect(() => {
+		const fetchUnieInfra = async () => {
+			await LinkUnieInfra(data?.user!);
+		};
+
+		fetchUnieInfra();
+	}, []);
 
 	return (
 		<DropdownMenu>
@@ -152,6 +162,8 @@ export const UserNav = () => {
 						className="cursor-pointer"
 						onClick={async () => {
 							await authClient.signOut().then(() => {
+								const key = process.env.NEXT_PUBLIC_UNIEINFRA_ACCESS_TOKEN_KEY!;
+								localStorage.removeItem(key);
 								router.push("/");
 							});
 							// await mutateAsync().then(() => {

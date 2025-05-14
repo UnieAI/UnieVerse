@@ -66,5 +66,8 @@ docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad
 pnpm dokploy:setup
 ```
 ```bash
+pnpm run server:script
+```
+```bash
 pnpm dokploy:dev
 ```
