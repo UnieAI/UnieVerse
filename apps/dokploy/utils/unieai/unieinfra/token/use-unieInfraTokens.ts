@@ -11,6 +11,7 @@ export const useUnieInfraTokens = () => {
         setTokens([]);
         setIsLoadingTokens(true);
         const _tokens = await ListUnieInfraTokens(accessToken);
+        console.log(`_tokens: `, _tokens);
         setTokens(_tokens);
         setIsLoadingTokens(false);
     };

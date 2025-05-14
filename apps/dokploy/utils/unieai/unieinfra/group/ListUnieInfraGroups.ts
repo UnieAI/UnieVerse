@@ -1,10 +1,10 @@
 import { toast } from "sonner";
 
-export const ListUnieInfraTokens = async (accessToken: string) => {
+export const ListUnieInfraGroups = async (accessToken: string) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        console.log(`try to get groups: \r\naccessToken:${accessToken}`);
 
-        const res = await fetch("/api/unieai/unieinfra/token/list", {
+        const res = await fetch("/api/unieai/unieinfra/group/user_group_map", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -20,7 +20,7 @@ export const ListUnieInfraTokens = async (accessToken: string) => {
 
         return data.data;
     } catch (_err) {
-        console.error("get tokens error:", _err);
+        console.error("get groups error:", _err);
         return [];
     }
 }

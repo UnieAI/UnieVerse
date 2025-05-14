@@ -1,10 +1,10 @@
 import { toast } from "sonner";
 
+export const LoginUnieInfraError: string = "Login UnieInfra failed";
+
 const TOKEN_KEY = process.env.NEXT_PUBLIC_UNIEINFRA_ACCESS_TOKEN_KEY!;
 
-const LoginUnieInfraError: string = "Login UnieInfra failed";
-
-const LoginUnieInfra = async (username: string, password: string): Promise<string> => {
+export const LoginUnieInfra = async (username: string, password: string): Promise<string> => {
     try {
         console.log(`try to login uniefra: \r\nuser:${username}\r\npassword:${password}`);
 
@@ -19,33 +19,15 @@ const LoginUnieInfra = async (username: string, password: string): Promise<strin
         const data = await res.json();
 
         if (!res.ok || !data.accessToken) {
+            toast.warning("Unable to connect to UnieInfra. Please try again later.");
             return LoginUnieInfraError;
         }
 
+        toast.success(`Unieinfra Connected！`);
         return data.accessToken;
     } catch (_err) {
         console.error("Login UnieInfra error:", _err);
+        toast.warning("Unable to connect to UnieInfra. Please try again later.");
         return LoginUnieInfraError;
-    }
-}
-
-export const LinkUnieInfra = async ( 
-    user: any,
-    setToken: (token: string | null) => void,
- ) => {
-    if (user) {
-        console.log(`user: `, user);
-
-        const unieInfraToken: string = await LoginUnieInfra(user.id, user.id);
-        if (unieInfraToken === LoginUnieInfraError) {
-            setToken(null);
-            toast.warning("Unable to connect to UnieInfra. Please try again later.");
-        } else {
-            setToken(unieInfraToken);
-            console.log(`Unieinfra access token: ${localStorage.getItem(TOKEN_KEY)}`);
-        }
-    } else {
-        setToken(null);
-        console.warn(`No user data input...`);
     }
 }

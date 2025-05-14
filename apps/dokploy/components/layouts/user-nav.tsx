@@ -25,7 +25,7 @@ import { useRouter } from "next/router";
 import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
 import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
-import { LinkUnieInfra } from "@/utils/unieai/unieinfra/user/LoginUnieInfra";
+import { UnieInfraConnectionHintPoint } from "@/components/unieai/unieinfra/UnieInfraConnectionHintPoint";
 
 const _AUTO_CHECK_UPDATES_INTERVAL_MINUTES = 7;
 
@@ -35,14 +35,15 @@ export const UserNav = () => {
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const { locale, setLocale } = useLocale();
-	const { updateAccessToken } = useUnieInfraAccessToken();
+	const { accessToken, isConnecting, LinkUnieInfra } = useUnieInfraAccessToken();
 	// const { mutateAsync } = api.auth.logout.useMutation();
 
-	useEffect(() => {
-		const fetchUnieInfra = async () => {
-			await LinkUnieInfra(data?.user!, updateAccessToken);
-		};
+	const fetchUnieInfra = async () => {
+		if (accessToken !== null) return;
+		await LinkUnieInfra(data?.user!);
+	};
 
+	useEffect(() => {
 		fetchUnieInfra();
 	}, []);
 
@@ -84,6 +85,17 @@ export const UserNav = () => {
 				</div>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
+					<DropdownMenuItem
+						className="cursor-pointer flex flex-row justify-between"
+						onClick={() => fetchUnieInfra()}
+						disabled={isConnecting}
+					>
+						UnieInfra
+						<div className="flex flex-col items-start ml-2">
+							<UnieInfraConnectionHintPoint showState={true} />
+						</div>
+					</DropdownMenuItem>
+					<div className="h-px my-1 bg-zinc-100  dark:bg-zinc-900" />
 					<DropdownMenuItem
 						className="cursor-pointer"
 						onClick={() => {

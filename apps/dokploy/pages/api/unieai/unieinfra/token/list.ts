@@ -1,4 +1,4 @@
-// pages/api/unieai/unieInfra/token/token.ts
+// pages/api/unieai/unieInfra/token/list.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -9,7 +9,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ message: "Method Not Allowed" });
     }
 
-    const { accessToken } = req.body;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "Missing or invalid Authorization header" });
+    }
+
+    const accessToken = authHeader.replace("Bearer ", "");
 
     try {
         console.log(`[UnieInfra] get tokens by accessToken: ${accessToken}`);

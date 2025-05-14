@@ -494,7 +494,7 @@ const Page = () => {
                                 <MessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={model} models={models} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
-                                <div className={`w-px ${isMobile && "mx-2"} bg-gray-300`} />
+                                <div className={`w-px ${isMobile && "mx-2"} bg-zinc-100 dark:bg-zinc-900`} />
                             )}
                         </React.Fragment>
                     ))}

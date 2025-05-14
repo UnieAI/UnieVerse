@@ -12,6 +12,7 @@ import {
 import { api } from "@/utils/api";
 import { BotIcon, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { HandleUnieInfra } from "./handle-unieinfra";
 import { HandleAi } from "./handle-ai";
 import { HandleLocalAi } from "./handle-local-ai";
 
@@ -35,6 +36,7 @@ export const AiForm = () => {
 						</div>
 						{aiConfigs && aiConfigs?.length > 0 && (
 						<div className="flex gap-3">
+							<HandleUnieInfra />
 						<HandleAi />
 						<HandleLocalAi />
 						</div>)}
@@ -55,6 +57,7 @@ export const AiForm = () => {
 											You don't have any AI configurations
 										</span>
 										<div className="flex gap-3">
+											<HandleUnieInfra />
 											<HandleAi />
 											<HandleLocalAi />
 										</div>

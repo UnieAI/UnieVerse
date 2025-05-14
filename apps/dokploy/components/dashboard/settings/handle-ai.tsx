@@ -28,9 +28,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+
 import { api } from "@/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PenBoxIcon, PlusIcon, RefreshCw } from "lucide-react";
+import { PenBoxIcon, PlusIcon, Sparkles, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -135,7 +136,6 @@ export const HandleAi = ({ aiId }: Props) => {
 		if (useUnieInfra) fetchUnieInfra();
 		else form.setValue("apiKey", "");
 	}, [useUnieInfra]);
-
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -254,30 +254,50 @@ export const HandleAi = ({ aiId }: Props) => {
 									<FormLabel>API Key</FormLabel>
 									<FormControl>
 										{useUnieInfra ? (
-											<div className="flex flex-row justify-between gap-2">
-												<Select
-													value={field.value}
-													onValueChange={field.onChange}
-												>
-													<FormControl>
-														<SelectTrigger className="w-[240px]">
-															<SelectValue placeholder="Select a token" />
-														</SelectTrigger>
-													</FormControl>
-													<SelectContent>
-														{tokens.map((token: any) => (
-															<SelectItem
-																key={token.id}
-																value={`sk-${token.key}`}
-															>
-																{token.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+											<div className={`flex flex-row gap-2 ${tokens.length !== 0 ? "justify-between" : "justify-end"}`}>
+												{tokens.length === 0 ? (
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														disabled={isLoadingTokens}
+														onClick={async () => {
+															if (accessToken) {
+																await setTokensByAccessToken(accessToken);
+																toast.success("Tokens refreshed");
+															} else {
+																toast.error("No access token available");
+															}
+														}}
+													>
+														Gen key
+														<Sparkles />
+													</Button>
+												) : (
+													<Select
+														value={field.value}
+														onValueChange={field.onChange}
+													>
+														<FormControl>
+															<SelectTrigger className="w-[240px]">
+																<SelectValue placeholder="Select a token" />
+															</SelectTrigger>
+														</FormControl>
+														<SelectContent>
+															{tokens.map((token: any) => (
+																<SelectItem
+																	key={token.id}
+																	value={`sk-${token.key}`}
+																>
+																	{token.name}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												)}
 												<Button
 													type="button"
-													variant="outline"
+													variant="ghost"
 													size="sm"
 													disabled={isLoadingTokens}
 													onClick={async () => {
@@ -289,6 +309,7 @@ export const HandleAi = ({ aiId }: Props) => {
 														}
 													}}
 												>
+													Refresh key
 													<RefreshCw />
 												</Button>
 											</div>
@@ -376,6 +397,6 @@ export const HandleAi = ({ aiId }: Props) => {
 					</form>
 				</Form>
 			</DialogContent>
-		</Dialog>
+		</Dialog >
 	);
 };
