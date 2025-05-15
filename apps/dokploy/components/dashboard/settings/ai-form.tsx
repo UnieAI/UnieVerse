@@ -250,8 +250,9 @@ export const AiForm = () => {
 															</div>
 															<div className="flex justify-between items-center">
 																<Switch
-																className="mr-2"
+																	className="mr-2"
 																	checked={token.status === 1}
+																	disabled={isLoadingTokens}
 																	onCheckedChange={async (checked) => {
 																		if (accessToken) {
 																			const payload: UnieInfraTokenStatusPayload = {
@@ -281,7 +282,7 @@ export const AiForm = () => {
 																		variant="ghost"
 																		size="icon"
 																		className="group hover:bg-red-500/10 "
-																		isLoading={isLoadingTokens}
+																		disabled={isLoadingTokens}
 																	>
 																		<Trash2 className="size-4 text-primary group-hover:text-red-500" />
 																	</Button>
