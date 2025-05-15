@@ -18,7 +18,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,8 +36,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
-import { useUnieInfraTokens } from "@/utils/unieai/unieinfra/token/use-unieInfraTokens";
+import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 const Schema = z.object({
 	name: z.string().min(1, { message: "Name is required" }),
@@ -51,22 +49,23 @@ const Schema = z.object({
 type Schema = z.infer<typeof Schema>;
 
 interface HandleAiProps {
-	open: boolean;
-	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 	GenToken: () => void;
 	aiId?: string;
 }
 
-export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
+export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 
-	const { accessToken } = useUnieInfraAccessToken();
-	const { tokens, setTokensByAccessToken, isLoadingTokens } = useUnieInfraTokens();
+	const {
+		accessToken,
+		tokens, getTokens, isLoadingTokens,
+	} = useUnieInfra();
 
 	const utils = api.useUtils();
+	const [open, setOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
-	const [useUnieInfra, setUseUnieInfra] = useState<boolean>(false);
+	const [useUnieInfraApi, setUseUnieInfraApi] = useState<boolean>(false);
 
 	const { data, refetch } = api.ai.one.useQuery(
 		{
@@ -130,14 +129,12 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 	useEffect(() => {
 		const fetchUnieInfra = async () => {
 			form.setValue("apiUrl", UNIEINFRA_API_URL!);
-			if (tokens.length === 0 && accessToken !== null) {
-				await setTokensByAccessToken(accessToken);
-			}
+			if (accessToken !== null) await getTokens(accessToken);
 		};
 
-		if (useUnieInfra) fetchUnieInfra();
+		if (useUnieInfraApi) fetchUnieInfra();
 		else form.setValue("apiKey", "");
-	}, [useUnieInfra]);
+	}, [useUnieInfraApi]);
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -212,15 +209,9 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 										<div className="flex flex-row justify-between gap-2">
 											<span>API URL</span>
 											<div className="flex items-center gap-1">
-												{/* <Checkbox
-													checked={useUnieInfra}
-													onCheckedChange={(checked) => setUseUnieInfra(checked as boolean)}
-													disabled={UNIEINFRA_API_URL === undefined}
-												/> */}
-
 												<Switch
-													checked={useUnieInfra}
-													onCheckedChange={(checked) => setUseUnieInfra(checked)}
+													checked={useUnieInfraApi}
+													onCheckedChange={(checked) => setUseUnieInfraApi(checked)}
 													disabled={!UNIEINFRA_API_URL}
 												/>
 												Use UnieInfra API
@@ -228,16 +219,16 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 										</div>
 									</FormLabel>
 									<FormControl>
-										{!useUnieInfra && (
+										{!useUnieInfraApi && (
 											<Input
 												{...field}
-												disabled={useUnieInfra}
-												placeholder={UNIEINFRA_API_URL || "https://api.openai.com/v1"}
+												disabled={useUnieInfraApi}
+												placeholder={"https://api.openai.com/v1"}
 											/>
 										)}
 									</FormControl>
 									<FormDescription>
-										{useUnieInfra ? (
+										{useUnieInfraApi ? (
 											"API URL is base UnieInfra"
 										) : (
 											"The base URL for your AI provider's API"
@@ -255,7 +246,7 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 								<FormItem>
 									<FormLabel>API Key</FormLabel>
 									<FormControl>
-										{useUnieInfra ? (
+										{useUnieInfraApi ? (
 											<div className={`flex flex-row gap-2 ${tokens.length !== 0 ? "justify-between" : "justify-end"}`}>
 												{tokens.length === 0 ? (
 													<Button
@@ -303,14 +294,14 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 													disabled={isLoadingTokens}
 													onClick={async () => {
 														if (accessToken) {
-															await setTokensByAccessToken(accessToken);
+															await getTokens(accessToken);
 															toast.success("Tokens refreshed");
 														} else {
 															toast.error("No access token available");
 														}
 													}}
 												>
-													Refresh key
+													Refresh tokens
 													<RefreshCw />
 												</Button>
 											</div>
@@ -319,8 +310,8 @@ export const HandleAi = ({ open, setOpen, GenToken, aiId }: HandleAiProps) => {
 										)}
 									</FormControl>
 									<FormDescription>
-										{useUnieInfra ? (
-											"Your UnieInfra API key for authentication"
+										{useUnieInfraApi ? (
+											"Your UnieInfra API token for authentication"
 										) : (
 											"Your API key for authentication"
 										)}

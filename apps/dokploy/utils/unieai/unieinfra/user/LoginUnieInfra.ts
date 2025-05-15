@@ -2,8 +2,6 @@ import { toast } from "sonner";
 
 export const LoginUnieInfraError: string = "Login UnieInfra failed";
 
-const TOKEN_KEY = process.env.NEXT_PUBLIC_UNIEINFRA_ACCESS_TOKEN_KEY!;
-
 export const LoginUnieInfra = async (username: string, password: string): Promise<string> => {
     try {
         console.log(`try to login uniefra: \r\nuser:${username}\r\npassword:${password}`);

@@ -24,8 +24,11 @@ import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
-import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
 import { UnieInfraConnectionHintPoint } from "@/components/unieai/unieinfra/UnieInfraConnectionHintPoint";
+
+import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key/key";
+
+import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 const _AUTO_CHECK_UPDATES_INTERVAL_MINUTES = 7;
 
@@ -35,7 +38,7 @@ export const UserNav = () => {
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const { locale, setLocale } = useLocale();
-	const { accessToken, isConnecting, LinkUnieInfra } = useUnieInfraAccessToken();
+	const { accessToken, LinkUnieInfra, isConnecting } = useUnieInfra();
 	// const { mutateAsync } = api.auth.logout.useMutation();
 
 	const fetchUnieInfra = async () => {
@@ -176,8 +179,7 @@ export const UserNav = () => {
 						className="cursor-pointer"
 						onClick={async () => {
 							await authClient.signOut().then(() => {
-								const key = process.env.NEXT_PUBLIC_UNIEINFRA_ACCESS_TOKEN_KEY!;
-								localStorage.removeItem(key);
+								localStorage.removeItem(ACCESS_TOKEN_KEY);
 								router.push("/");
 							});
 							// await mutateAsync().then(() => {

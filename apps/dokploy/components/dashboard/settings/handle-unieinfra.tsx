@@ -28,7 +28,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import { api } from "@/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PenBoxIcon, PlusIcon, Sparkles, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -36,10 +35,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { useUnieInfraAccessToken } from "@/utils/unieai/unieinfra/user/use-unieInfraAccessToken";
-import { useUnieInfraGroups } from "@/utils/unieai/unieinfra/group/use-unieInfraGroups";
+import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
-import { CreateUnieInfraToken, CreateUnieInfraTokenPayload, CreateUnieInfraTokenSuccess } from "@/utils/unieai/unieinfra/token/CreateUnieInfraToken";
+import { toDatetimeLocalString } from "@/utils/time";
+import { UnieInfraTokenPayload, Success } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
 const Schema = z.object({
 	expired_time: z.number(),
@@ -53,17 +52,21 @@ const Schema = z.object({
 type Schema = z.infer<typeof Schema>;
 
 interface HandleUnieInfraProps {
-	open: boolean;
-	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+	open?: boolean;
+	setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+	tokenData?: UnieInfraTokenPayload;
 }
-export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
+export const HandleUnieInfra = ({ open: propOpen, setOpen: propSetOpen, tokenData }: HandleUnieInfraProps) => {
+	const {
+		accessToken,
+		getTokens, postToken, putToken, isLoadingTokens,
+		groups, getGroups, isLoadingGroups,
+	} = useUnieInfra();
 
-	const { data } = api.user.get.useQuery();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
-
-	const { accessToken } = useUnieInfraAccessToken();
-	const { groups, setGroupsByAccessToken, isLoadingGroups } = useUnieInfraGroups();
-
+	const [internalOpen, internalSetOpen] = useState<boolean>(false);
+	// 優先使用 props 傳入的 open/setOpen，否則使用本地 state
+	const open = propOpen !== undefined ? propOpen : internalOpen;
+	const setOpen = propSetOpen !== undefined ? propSetOpen : internalSetOpen;
 	const [error, setError] = useState<string | null>(null);
 
 	const [neverExpires, setNeverExpires] = useState<boolean>(true);
@@ -91,18 +94,6 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 		}
 	}
 
-	function toDatetimeLocalString(date: Date) {
-		const pad = (n: number) => n.toString().padStart(2, "0");
-
-		const yyyy = date.getFullYear();
-		const MM = pad(date.getMonth() + 1); // 月份從 0 開始
-		const dd = pad(date.getDate());
-		const hh = pad(date.getHours());
-		const mm = pad(date.getMinutes());
-
-		return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
-	}
-
 	const form = useForm<Schema>({
 		resolver: zodResolver(Schema),
 		defaultValues: {
@@ -115,15 +106,42 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 		},
 	});
 
+	const resetForm = () => {
+		console.log(tokenData !== undefined);
+		console.log(tokenData?.unlimited_quota ?? false);
+		if (!tokenData) {
+			form.reset();
+		} else {
+			form.reset({
+				expired_time: tokenData?.expired_time ?? -1,
+				group: tokenData?.group ?? "",
+				is_edit: tokenData ? true : false,
+				name: tokenData?.name ?? "",
+				remain_quota: tokenData?.remain_quota ?? 0,
+				unlimited_quota: tokenData?.unlimited_quota ?? false,
+			});
+		}
+
+		setNeverExpires(tokenData ? (tokenData?.expired_time === -1) ? true : false : true);
+		setUnlimitedQuota(tokenData?.unlimited_quota ?? false);
+	}
+
+	useEffect(() => {
+		if (open) {
+			resetForm();
+		}
+	}, [tokenData, open]);
+
+
 	useEffect(() => {
 		const fetchUnieInfra = async () => {
-			if (groups.length === 0 && accessToken !== null) {
-				await setGroupsByAccessToken(accessToken);
+			if (accessToken !== null) {
+				await getGroups(accessToken);
 			}
 		};
 
 		fetchUnieInfra();
-	}, [groups, accessToken]);
+	}, [accessToken]);
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -132,18 +150,17 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 				return;
 			}
 
-			const payload: CreateUnieInfraTokenPayload = { ...data };
+			const payload: UnieInfraTokenPayload = { ...(tokenData && { ...tokenData }), ...data };
 
-			const result = await CreateUnieInfraToken(accessToken, payload);
+			const result = tokenData ? await putToken(accessToken, payload) : await postToken(accessToken, payload);
 
-			if (result === CreateUnieInfraTokenSuccess) {
-				form.reset();
-				setNeverExpires(true);
-				setUnlimitedQuota(false);
+			if (result === Success) {
+				// await getTokens(accessToken);
+				resetForm();
 				setOpen(false);
 			}
 		} catch (error) {
-			toast.error("Failed to create UnieInfra token", {
+			toast.error(`Failed to ${tokenData ? "update" : "create"} UnieInfra token`, {
 				description: error instanceof Error ? error.message : "Unknown error",
 			});
 		}
@@ -152,8 +169,20 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger className="" asChild>
-				{accessToken !== null && (
-					<Button className="cursor-pointer space-x-3">
+				{tokenData ? (
+					<Button
+						variant="ghost"
+						size="icon"
+						className="group hover:bg-blue-500/10"
+						disabled={accessToken === null}
+					>
+						<PenBoxIcon className="size-3.5  text-primary group-hover:text-blue-500" />
+					</Button>
+				) : (
+					<Button
+						className="cursor-pointer space-x-3"
+						disabled={accessToken === null}
+					>
 						<PlusIcon className="h-4 w-4" />
 						Add UnieInfra Token
 					</Button>
@@ -161,7 +190,7 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Add UnieInfra Token</DialogTitle>
+					<DialogTitle>{tokenData ? "Edit UnieInfra Token" : "Add UnieInfra Token"}</DialogTitle>
 					<DialogDescription>
 						Configure your UnieInfra token settings
 					</DialogDescription>
@@ -302,7 +331,7 @@ export const HandleUnieInfra = ({ open, setOpen }: HandleUnieInfraProps) => {
 
 						<div className="flex justify-end  gap-2 pt-4">
 							<Button type="submit">
-								Create
+								{tokenData ? "Update" : "Create"}
 							</Button>
 						</div>
 					</form>

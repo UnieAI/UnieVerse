@@ -1,4 +1,4 @@
-// pages/api/unieai/unieInfra/token/create.ts
+// pages/api/unieai/unieInfra/token/put.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -17,20 +17,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const accessToken = authHeader.replace("Bearer ", "");
 
-    const {
-        expired_time,
-        group,
-        is_edit,
-        name,
-        remain_quota,
-        unlimited_quota,
-    } = req.body;
-
     try {
-        console.log(`[UnieInfra] create token by accessToken: ${accessToken}`);
+        console.log(`[UnieInfra] update token by accessToken: ${accessToken}`);
 
         const response = await fetch(`${UNIEINFRA_API_URL}/token`, {
-            method: "POST",
+            method: "PUT",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${accessToken}`
@@ -40,20 +31,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         const result = await response.json();
-        console.log(`[UnieInfra] create token result:`, result);
+        console.log(`[UnieInfra] update token result:`, result);
 
         if (!response.ok) {
-            console.error(`[UnieInfra] Failed to create token:`, result);
+            console.error(`[UnieInfra] Failed to update token:`, result);
             return res.status(response.status).json({
-                message: "UnieInfra create token failed",
+                message: "UnieInfra update token failed",
                 error: result,
             });
         }
 
-        // 應該要有這一行，回傳結果給前端
         return res.status(response.status).json(result);
     } catch (error: any) {
-        console.error(`[UnieInfra] Unexpected error while creating token:`, error.message);
-        return res.status(500).json({ message: "UnieInfra create token failed", error: error.message });
+        console.error(`[UnieInfra] Unexpected error while updating token:`, error.message);
+        return res.status(500).json({ message: "UnieInfra update token failed", error: error.message });
     }
 }

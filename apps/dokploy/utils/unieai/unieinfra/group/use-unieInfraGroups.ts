@@ -2,19 +2,19 @@ import { useEffect, useState } from "react";
 import { ListUnieInfraGroups } from "./ListUnieInfraGroups";
 
 export const useUnieInfraGroups = () => {
-    const [isLoadingGroups, setIsLoadingGroups] = useState(false);
-    const [groups, setGroups] = useState([]);
+        const [isLoading, setIsLoading] = useState(false);
+        const [groups, setGroups] = useState([]);
 
-    const updateGroups = async (accessToken: string) => {
-        if (isLoadingGroups) return;
+    const getGroups = async (accessToken: string) => {
+        if (isLoading) return;
 
         setGroups([]);
-        setIsLoadingGroups(true);
+        setIsLoading(true);
         const _groups = await ListUnieInfraGroups(accessToken);
         console.log(`_groups: `, _groups);
         setGroups(_groups);
-        setIsLoadingGroups(false);
+        setIsLoading(false);
     };
 
-    return { groups, setGroupsByAccessToken: updateGroups, isLoadingGroups };
+    return { groups, getGroups, isLoading };
 };

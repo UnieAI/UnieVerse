@@ -7,6 +7,7 @@ import { api } from "@/utils/api";
 import type { NextPage } from "next";
 import { appWithTranslation } from "next-i18next";
 import { ThemeProvider } from "next-themes";
+import { UnieInfraProvider } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 import type { AppProps } from "next/app";
 import { Inter } from "next/font/google";
 import Head from "next/head";
@@ -56,9 +57,11 @@ const MyApp = ({
 				disableTransitionOnChange
 				forcedTheme={Component.theme}
 			>
-				<Toaster richColors />
-				<SearchCommand />
-				{getLayout(<Component {...pageProps} />)}
+				<UnieInfraProvider>
+					<Toaster richColors />
+					<SearchCommand />
+					{getLayout(<Component {...pageProps} />)}
+				</UnieInfraProvider>
 			</ThemeProvider>
 		</>
 	);

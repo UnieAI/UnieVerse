@@ -1,31 +1,30 @@
 import { useEffect, useState } from "react";
 import { LoginUnieInfra, LoginUnieInfraError } from "./LoginUnieInfra";
-
-const TOKEN_KEY = process.env.NEXT_PUBLIC_UNIEINFRA_ACCESS_TOKEN_KEY!;
+import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key/key";
 
 export const useUnieInfraAccessToken = () => {
-    const [isConnecting, setIsConnecting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [accessToken, setAccessToken] = useState<string | null>(null);
 
     // 初始化：讀取 localStorage
     useEffect(() => {
-        const storedToken = localStorage.getItem(TOKEN_KEY);
+        const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
         setAccessToken(storedToken);
     }, []);
 
     const updateAccessToken = (newToken: string | null) => {
         if (newToken) {
-            localStorage.setItem(TOKEN_KEY, newToken);
+            localStorage.setItem(ACCESS_TOKEN_KEY, newToken);
         } else {
-            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(ACCESS_TOKEN_KEY);
         }
         setAccessToken(newToken);
     };
 
     const LinkUnieInfra = async (user: any) => {
-        if (isConnecting) return;
+        if (isLoading) return;
 
-        setIsConnecting(true);
+        setIsLoading(true);
         if (user) {
             console.log(`user: `, user);
 
@@ -38,8 +37,8 @@ export const useUnieInfraAccessToken = () => {
         } else {
             updateAccessToken(null);
         }
-        setIsConnecting(false);
+        setIsLoading(false);
     }
 
-    return { accessToken, isConnecting, LinkUnieInfra };
+    return { accessToken, LinkUnieInfra, isLoading };
 };
