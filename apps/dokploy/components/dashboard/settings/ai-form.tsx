@@ -133,7 +133,7 @@ export const AiForm = () => {
 
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
-						{(isLoading || isLoadingTokens) ? (
+						{(isLoading) ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[25vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />
