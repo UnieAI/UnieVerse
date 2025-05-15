@@ -64,7 +64,7 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 	const [open, setOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
+	let UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
 	const [useUnieInfraApi, setUseUnieInfraApi] = useState<boolean>(false);
 
 	const { data, refetch } = api.ai.one.useQuery(
@@ -128,6 +128,7 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 
 	useEffect(() => {
 		const fetchUnieInfra = async () => {
+			UNIEINFRA_API_URL = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
 			form.setValue("apiUrl", UNIEINFRA_API_URL!);
 			if (accessToken !== null) await getTokens(accessToken);
 		};

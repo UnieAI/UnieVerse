@@ -13,7 +13,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { BotIcon, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { BotIcon, Loader2, Trash2, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { HandleAi } from "./handle-ai";
@@ -272,6 +272,23 @@ export const AiForm = () => {
 																	}}
 																/>
 																<HandleUnieInfra tokenData={token} />
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	className="group hover:bg-red-500/10 "
+																	disabled={isLoadingTokens}
+																	onClick={() => {
+																		navigator.clipboard.writeText(`sk-${token.key!}`)
+																			.then(() => {
+																				alert("UnieInfra token has been copied to the clipboard!");
+																			})
+																			.catch((err) => {
+																				console.error("UnieInfra token copy failed!", err);
+																			});
+																	}}
+																>
+																	<Copy className="size-4 text-primary group-hover:opacity-50" />
+																</Button>
 																<DialogAction
 																	title="Delete AI"
 																	description="Are you sure you want to delete this AI?"
