@@ -71,9 +71,15 @@ export const AiForm = () => {
 							<div>
 								<CardTitle className="text-xl flex flex-row gap-2">
 									<BotIcon className="size-6 text-muted-foreground self-center" />
-									AI Settings
+									{(currentTab === tabValues[0]!) ? "AI Settings" : (currentTab === tabValues[1]!) ? "UnieInfra Token Settings" : "Unknown Settings"}
 								</CardTitle>
-								<CardDescription>Manage your AI configurations</CardDescription>
+								{(currentTab === tabValues[0]!) ? (
+									<CardDescription>Manage your AI configurations</CardDescription>
+								) : (currentTab === tabValues[1]!) ? (
+									<CardDescription>Manage your UnieInfra Token configurations</CardDescription>
+								) : (
+									<CardDescription>Unknown configurations</CardDescription>
+								)}
 							</div>
 
 							<Tabs value={currentTab} defaultValue={tabValues[0]!} className="flex gap-3" onValueChange={handleTabChange}>
