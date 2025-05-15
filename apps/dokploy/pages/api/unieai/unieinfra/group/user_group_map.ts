@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const UNIEINFRA_API_URL = process.env.UNIEINFRA_API_URL;
+import { UNIEINFRA_SYSTEM_API_URL } from "@/utils/unieai/unieinfra/key/key";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         console.log(`[UnieInfra] get groups by accessToken: ${accessToken}`);
 
-        const response = await fetch(`${UNIEINFRA_API_URL}/user_group_map`, {
+        const response = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/user_group_map`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

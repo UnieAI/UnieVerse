@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const UNIEINFRA_API_URL = process.env.UNIEINFRA_API_URL;
+import { UNIEINFRA_SYSTEM_API_URL } from "@/utils/unieai/unieinfra/key/key";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         // Step 1: 嘗試登入
         console.log(`[UnieInfra] Attempting login for user: ${username}`);
-        const loginRes = await fetch(`${UNIEINFRA_API_URL}/user/login`, {
+        const loginRes = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/user/login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 若錯誤碼為 3（使用者不存在），改為註冊
         if (loginData.error_code === 3) {
             console.log(`[UnieInfra] User not found. Attempting to register: ${username}`);
-            const registerRes = await fetch(`${UNIEINFRA_API_URL}/user/register`, {
+            const registerRes = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/user/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password }),

@@ -176,7 +176,7 @@ export const HandleUnieInfra = ({ open: propOpen, setOpen: propSetOpen, tokenDat
 						className="group hover:bg-blue-500/10"
 						disabled={accessToken === null}
 					>
-						<PenBoxIcon className="size-3.5  text-primary group-hover:text-blue-500" />
+						<PenBoxIcon className="size-4  text-primary group-hover:text-blue-500" />
 					</Button>
 				) : (
 					<Button

@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const UNIEINFRA_API_URL = process.env.UNIEINFRA_API_URL;
+import { UNIEINFRA_SYSTEM_API_URL } from "@/utils/unieai/unieinfra/key/key";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         console.log(`[UnieInfra] delete token by token id: ${accessToken}`);
 
-        const response = await fetch(`${UNIEINFRA_API_URL}/token/${id}`, {
+        const response = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/token/${id}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",

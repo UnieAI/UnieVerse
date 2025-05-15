@@ -36,6 +36,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key/key";
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 const Schema = z.object({
@@ -64,7 +65,6 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 	const [open, setOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 
-	let UNIEINFRA_API_URL: string | undefined = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
 	const [useUnieInfraApi, setUseUnieInfraApi] = useState<boolean>(false);
 
 	const { data, refetch } = api.ai.one.useQuery(
@@ -128,14 +128,13 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 
 	useEffect(() => {
 		const fetchUnieInfra = async () => {
-			UNIEINFRA_API_URL = process.env.NEXT_PUBLIC_UNIEINFRA_OPENAI_API_URL;
-			form.setValue("apiUrl", UNIEINFRA_API_URL!);
+			form.setValue("apiUrl", UNIEINFRA_OPENAI_API_URL);
 			if (accessToken !== null) await getTokens(accessToken);
 		};
 
 		if (useUnieInfraApi) fetchUnieInfra();
 		else form.setValue("apiKey", "");
-	}, [useUnieInfraApi]);
+	}, [open, useUnieInfraApi]);
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -163,9 +162,9 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 					<Button
 						variant="ghost"
 						size="icon"
-						className="group hover:bg-blue-500/10 "
+						className="group hover:bg-blue-500/10"
 					>
-						<PenBoxIcon className="size-3.5  text-primary group-hover:text-blue-500" />
+						<PenBoxIcon className="size-4  text-primary group-hover:text-blue-500" />
 					</Button>
 				) : (
 					<Button className="cursor-pointer space-x-3">
@@ -213,7 +212,6 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 												<Switch
 													checked={useUnieInfraApi}
 													onCheckedChange={(checked) => setUseUnieInfraApi(checked)}
-													disabled={!UNIEINFRA_API_URL}
 												/>
 												Use UnieInfra API
 											</div>

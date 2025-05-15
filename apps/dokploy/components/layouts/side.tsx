@@ -91,7 +91,6 @@ import { Logo } from "../shared/logo";
 import { Button } from "../ui/button";
 import { UpdateServerButton } from "./update-server";
 import { UserNav } from "./user-nav";
-import { UnieInfraConnectionHintPoint } from "@/components/unieai/unieinfra/UnieInfraConnectionHintPoint";
 
 // The types of the queries we are going to use
 type AuthQueryOutput = inferRouterOutputs<AppRouter>["user"]["get"];
@@ -884,10 +883,6 @@ function SidebarLogo() {
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</SidebarMenuItem>
-
-					<div className="flex flex-col items-start">
-						<UnieInfraConnectionHintPoint />
-					</div>
 
 					{/* Notification Bell */}
 					<SidebarMenuItem className={cn(state === "collapsed" && "mt-2")}>

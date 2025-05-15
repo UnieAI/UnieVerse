@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const UNIEINFRA_API_URL = process.env.UNIEINFRA_API_URL;
+import { UNIEINFRA_SYSTEM_API_URL } from "@/utils/unieai/unieinfra/key/key";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let totalCount = 0;
 
         while (true) {
-            const response = await fetch(`${UNIEINFRA_API_URL}/token?page=${page}&size=${pageSize}&keyword=&order=-id`, {
+            const response = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/token?page=${page}&size=${pageSize}&keyword=&order=-id`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

@@ -275,7 +275,7 @@ export const AiForm = () => {
 																<Button
 																	variant="ghost"
 																	size="icon"
-																	className="group hover:bg-red-500/10 "
+																	className="group hover:bg-blue-500/10"
 																	disabled={isLoadingTokens}
 																	onClick={() => {
 																		navigator.clipboard.writeText(`sk-${token.key!}`)
@@ -287,7 +287,7 @@ export const AiForm = () => {
 																			});
 																	}}
 																>
-																	<Copy className="size-4 text-primary group-hover:opacity-50" />
+																	<Copy className="size-4  text-primary group-hover:text-blue-500" />
 																</Button>
 																<DialogAction
 																	title="Delete AI"
