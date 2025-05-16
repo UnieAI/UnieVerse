@@ -9,7 +9,8 @@ export const UNIEINFRA_SYSTEM_API_URL = `${process.env.NEXT_PUBLIC_UNIEINFRA_API
 export const API_TYPES = {
     AI: "AI",
     UNIEINFRA: "UnieInfra",
-    Other: "Other",
+    OTHER: "Other",
+    THIRD_PARTY:"ThirdParty",
 }
-export const API_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.AI, API_TYPES.Other];
-export const TAB_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.AI];
+export const API_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.THIRD_PARTY, API_TYPES.OTHER];
+export const TAB_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.THIRD_PARTY, API_TYPES.AI];

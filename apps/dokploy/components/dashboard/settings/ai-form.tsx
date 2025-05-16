@@ -68,12 +68,21 @@ export const AiForm = () => {
 							<div>
 								<CardTitle className="text-xl flex flex-row gap-2">
 									<BotIcon className="size-6 text-muted-foreground self-center" />
-									{(currentTab === API_TYPES.AI) ? "AI Settings" : (currentTab === API_TYPES.UNIEINFRA) ? "UnieInfra Token Settings" : "Unknown Settings"}
+									{(currentTab === API_TYPES.UNIEINFRA) ?
+										"UnieInfra Token Settings"
+										: (currentTab === API_TYPES.THIRD_PARTY) ?
+											"Third Party Api Settings"
+											: (currentTab === API_TYPES.AI) ?
+												"舊AI(棄用)"
+												: "Unknown Settings"
+									}
 								</CardTitle>
-								{(currentTab === API_TYPES.AI) ? (
-									<CardDescription>Manage your AI configurations</CardDescription>
-								) : (currentTab === API_TYPES.UNIEINFRA) ? (
+								{(currentTab === API_TYPES.UNIEINFRA) ? (
 									<CardDescription>Manage your UnieInfra Token configurations</CardDescription>
+								) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+									<CardDescription>Manage your Third Party Api configurations</CardDescription>
+								) : (currentTab === API_TYPES.AI) ? (
+									<CardDescription>Manage your AI configurations</CardDescription>
 								) : (
 									<CardDescription>Unknown configurations</CardDescription>
 								)}

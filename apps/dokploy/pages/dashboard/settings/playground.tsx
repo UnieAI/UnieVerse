@@ -556,7 +556,7 @@ const Page = () => {
             else if (currentApiType === API_TYPES.UNIEINFRA) {
                 setApiUrl(UNIEINFRA_OPENAI_API_URL);
                 if (accessToken !== null) await getTokens(accessToken);
-            } else if (currentApiType === API_TYPES.Other) {
+            } else if (currentApiType === API_TYPES.OTHER) {
                 setApiUrl("");
                 setApiToken("");
             }
@@ -857,7 +857,7 @@ const SideBar = ({
                                     value={_str}
                                     disabled={(_str === API_TYPES.AI)} // 暫不開放
                                 >
-                                    {(_str === API_TYPES.AI) ? "AI Settings (coming soon...)" : (_str === API_TYPES.UNIEINFRA) ? "UnieInfra Token" : (_str === API_TYPES.Other) && "Other API"}
+                                    {(_str === API_TYPES.UNIEINFRA) ? "UnieInfra Token" : (_str === API_TYPES.THIRD_PARTY) ? "Third Party" : (_str === API_TYPES.OTHER) ? "Test API" : _str}
                                 </option>
                             ))}
                         </select>
@@ -888,7 +888,7 @@ const SideBar = ({
                                     ))}
                                 </select>
                             </>
-                        ) : (currentApiType === API_TYPES.Other) && (
+                        ) : (currentApiType === API_TYPES.OTHER) && (
                             <>
                                 <label className="text-sm flex flex-col">
                                     <span>API URL</span>
