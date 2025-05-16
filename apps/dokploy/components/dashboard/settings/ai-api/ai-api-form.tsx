@@ -16,21 +16,18 @@ import { api } from "@/utils/api";
 import { BotIcon, Loader2, Trash2, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-import { HandleAi } from "./handle-ai";
-import { HandleLocalAi } from "./handle-local-ai";
-import { HandleUnieInfra } from "./handle-unieinfra";
-import { HandleAiThirdParty } from "./handle-ai-third-party";
+import { HandleUnieInfra } from "@/components/dashboard/settings/ai-api/handle-unieinfra";
+import { HandleAiThirdParty } from "@/components/dashboard/settings/ai-api/handle-ai-third-party";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 import { toDatetimeLocalString } from "@/utils/time";
-import { API_TYPES, TAB_VALUES } from "@/utils/unieai/unieinfra/key";
+import { AI_API_TAB_VALUE, AI_API_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
-export const AiForm = () => {
-	// aiConfigs 可以 list 出現有的 ai
+export const AiApiForm = () => {
+
 	const { data: aiThirdPartyConfigs, refetch: refetchAiThirdParty, isLoading: isLoadingAiThirdParty } = api.aiThirdParty.getAll.useQuery();
-	const { data: aiConfigs, refetch: refetchAi, isLoading: isLoadingAi } = api.ai.getAll.useQuery();
 	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
 
 	// tokens 可以 list 出現有的 unieinfra tokens
@@ -42,14 +39,7 @@ export const AiForm = () => {
 
 	const [openHandleUnieInfra, setOpenHandleUnieInfra] = useState<boolean>(false);
 
-	const [currentTab, setCurrentTab] = useState<string>(API_TYPES.UNIEINFRA);
-
-	const GenToken = () => {
-		// 切換至 "UnieInfra Token"
-		console.log(`open GenToken`);
-		setCurrentTab(API_TYPES.UNIEINFRA);
-		setOpenHandleUnieInfra(true);
-	}
+	const [currentTab, setCurrentTab] = useState<string>(AI_API_TAB_VALUE.UNIEINFRA);
 
 	useEffect(() => {
 		const fetchUnieInfra = async () => {
@@ -58,7 +48,7 @@ export const AiForm = () => {
 			}
 		};
 
-		if (currentTab === API_TYPES.UNIEINFRA) fetchUnieInfra();
+		if (currentTab === AI_API_TAB_VALUE.UNIEINFRA) fetchUnieInfra();
 	}, [currentTab]);
 
 	return (
@@ -70,29 +60,25 @@ export const AiForm = () => {
 							<div>
 								<CardTitle className="text-xl flex flex-row gap-2">
 									<BotIcon className="size-6 text-muted-foreground self-center" />
-									{(currentTab === API_TYPES.UNIEINFRA) ?
+									{(currentTab === AI_API_TAB_VALUE.UNIEINFRA) ?
 										"UnieInfra Token Settings"
-										: (currentTab === API_TYPES.THIRD_PARTY) ?
+										: (currentTab === AI_API_TAB_VALUE.THIRD_PARTY) ?
 											"Third Party Api Settings"
-											: (currentTab === API_TYPES.AI) ?
-												"AI Settings"
-												: "Unknown Settings"
+											: "Unknown Settings"
 									}
 								</CardTitle>
-								{(currentTab === API_TYPES.UNIEINFRA) ? (
+								{(currentTab === AI_API_TAB_VALUE.UNIEINFRA) ? (
 									<CardDescription>Manage your UnieInfra Token configurations</CardDescription>
-								) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+								) : (currentTab === AI_API_TAB_VALUE.THIRD_PARTY) ? (
 									<CardDescription>Manage your Third Party Api configurations</CardDescription>
-								) : (currentTab === API_TYPES.AI) ? (
-									<CardDescription>Manage your AI configurations</CardDescription>
 								) : (
 									<CardDescription>Unknown configurations</CardDescription>
 								)}
 							</div>
 
-							<Tabs value={currentTab} defaultValue={API_TYPES.UNIEINFRA} className="flex gap-3" onValueChange={setCurrentTab}>
+							<Tabs value={currentTab} defaultValue={AI_API_TAB_VALUE.UNIEINFRA} className="flex gap-3" onValueChange={setCurrentTab}>
 								<TabsList className="w-full justify-start h-12 rounded-none bg-transparent border-b border-zinc-200 dark:border-zinc-800">
-									{TAB_VALUES.map((tabValue: string, index) => (
+									{AI_API_TAB_KEYS.map((tabValue: string, index) => (
 										<TabsTrigger
 											key={index}
 											value={tabValue}
@@ -106,16 +92,7 @@ export const AiForm = () => {
 						</div>
 
 						<div className="flex w-full justify-end">
-							{(currentTab === API_TYPES.AI) ? (
-								<>
-									{aiConfigs && aiConfigs?.length > 0 && (
-										<div className="flex gap-3">
-											<HandleAi GenToken={GenToken} />
-											<HandleLocalAi />
-										</div>
-									)}
-								</>
-							) : (currentTab === API_TYPES.UNIEINFRA) ? (
+							{(currentTab === AI_API_TAB_VALUE.UNIEINFRA) ? (
 								<>
 									{tokens && tokens?.length > 0 && (
 										<div className="flex gap-3">
@@ -138,7 +115,7 @@ export const AiForm = () => {
 										</div>
 									)}
 								</>
-							) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+							) : (currentTab === AI_API_TAB_VALUE.THIRD_PARTY) ? (
 								<>
 									{aiThirdPartyConfigs && aiThirdPartyConfigs?.length > 0 && (
 										<div className="flex gap-3">
@@ -155,76 +132,14 @@ export const AiForm = () => {
 
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
-						{(isLoadingAi || isLoadingAiThirdParty) ? (
+						{(isLoadingAiThirdParty) ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[25vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />
 							</div>
 						) : (
 							<>
-								{(currentTab === API_TYPES.AI) ? (
-									<>
-										{aiConfigs?.length === 0 ? (
-											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">
-												<BotIcon className="size-8 self-center text-muted-foreground" />
-												<span className="text-base text-muted-foreground text-center">
-													You don't have any AI configurations
-												</span>
-												<div className="flex gap-3">
-													<HandleAi GenToken={GenToken} />
-													<HandleLocalAi />
-												</div>
-											</div>
-										) : (
-											<div className="flex flex-col gap-4 rounded-lg min-h-[25vh]">
-												{aiConfigs?.map((config) => (
-													<div
-														key={config.aiId}
-														className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
-													>
-														<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
-															<div>
-																<span className="text-sm font-medium">
-																	{config.name}
-																</span>
-																<CardDescription>{config.model}</CardDescription>
-															</div>
-															<div className="flex justify-between items-center">
-																<HandleAi GenToken={GenToken} aiId={config.aiId} />
-																<DialogAction
-																	title="Delete AI"
-																	description="Are you sure you want to delete this AI?"
-																	type="destructive"
-																	onClick={async () => {
-																		await mutateAsync({
-																			aiId: config.aiId,
-																		})
-																			.then(() => {
-																				toast.success("AI deleted successfully");
-																				refetchAi();
-																			})
-																			.catch(() => {
-																				toast.error("Error deleting AI");
-																			});
-																	}}
-																>
-																	<Button
-																		variant="ghost"
-																		size="icon"
-																		className="group hover:bg-red-500/10 "
-																		isLoading={isRemoving}
-																	>
-																		<Trash2 className="size-4 text-primary group-hover:text-red-500" />
-																	</Button>
-																</DialogAction>
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										)}
-									</>
-								) : (currentTab === API_TYPES.UNIEINFRA) ? (
+								{(currentTab === AI_API_TAB_VALUE.UNIEINFRA) ? (
 									<>
 										{tokens?.length === 0 ? (
 											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">
@@ -333,7 +248,7 @@ export const AiForm = () => {
 											</div>
 										)}
 									</>
-								) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+								) : (currentTab === AI_API_TAB_VALUE.THIRD_PARTY) ? (
 									<>
 										{aiThirdPartyConfigs?.length === 0 ? (
 											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">

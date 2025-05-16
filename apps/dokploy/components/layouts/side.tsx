@@ -254,9 +254,16 @@ function useMenu(): Menu {
 					!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
 			},
 			{
-				title: "AI",
+				title: "AI Model",
 				icon: BotIcon,
 				url: "/dashboard/settings/ai",
+				isSingle: true,
+				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+			},
+			{
+				title: "AI Model Token",
+				icon: KeyRound,
+				url: "/dashboard/settings/ai-api",
 				isSingle: true,
 				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 			},

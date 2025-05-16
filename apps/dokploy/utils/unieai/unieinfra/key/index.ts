@@ -6,11 +6,26 @@ export const UNIEINFRA_OPENAI_API_URL = `${process.env.NEXT_PUBLIC_UNIEINFRA_API
 
 export const UNIEINFRA_SYSTEM_API_URL = `${process.env.NEXT_PUBLIC_UNIEINFRA_API_URL}/api`;
 
-export const API_TYPES = {
+// playground tab
+export const PLAYGROUND_TAB_VALUE = {
     AI: "AI",
     UNIEINFRA: "UnieInfra",
-    OTHER: "Other",
-    THIRD_PARTY:"ThirdParty",
+    THIRD_PARTY: "Third-Party",
+    TEST_API: "Test API",
 }
-export const API_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.THIRD_PARTY, API_TYPES.OTHER];
-export const TAB_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.THIRD_PARTY];
+export const PLAYGROUND_TAB_KEYS: string[] = [PLAYGROUND_TAB_VALUE.UNIEINFRA, PLAYGROUND_TAB_VALUE.THIRD_PARTY, PLAYGROUND_TAB_VALUE.TEST_API];
+
+// ai settings
+export const AI_MODEL_SOURCE_VALUE = {
+    UNIEINFRA: "By UnieInfra",
+    THIRD_PARTY: "By Third-Party",
+    OTHER_API: "By other api",
+}
+export const AI_MODEL_SOURCE_KEYS: string[] = [AI_MODEL_SOURCE_VALUE.UNIEINFRA, AI_MODEL_SOURCE_VALUE.THIRD_PARTY, AI_MODEL_SOURCE_VALUE.OTHER_API];
+
+// ai-api settings tab
+export const AI_API_TAB_VALUE = {
+    UNIEINFRA: "UnieInfra",
+    THIRD_PARTY: "Third-Party",
+}
+export const AI_API_TAB_KEYS: string[] = [AI_API_TAB_VALUE.UNIEINFRA, AI_API_TAB_VALUE.THIRD_PARTY];
