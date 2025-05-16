@@ -673,6 +673,13 @@
       "when": 1746905313634,
       "tag": "0095_purple_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1747395467536,
+      "tag": "0096_oval_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

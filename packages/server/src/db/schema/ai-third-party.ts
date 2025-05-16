@@ -5,16 +5,16 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
 
-export const ai = pgTable("ai", {
-	aiId: text("aiId")
+export const aiThirdParty = pgTable("ai_third_party", {
+	apiId: text("apiId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
+	description: text("description").notNull(),
 	apiUrl: text("apiUrl").notNull(),
 	apiKey: text("apiKey").notNull(),
-	model: text("model").notNull(),
-	isEnabled: boolean("isEnabled").notNull().default(true),
+	status: boolean("status").notNull().default(true),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }), // Admin ID who created the AI settings
@@ -23,61 +23,34 @@ export const ai = pgTable("ai", {
 		.$defaultFn(() => new Date().toISOString()),
 });
 
-export const aiRelations = relations(ai, ({ one }) => ({
+export const aiThirdPartyRelations = relations(aiThirdParty, ({ one }) => ({
 	organization: one(organization, {
-		fields: [ai.organizationId],
+		fields: [aiThirdParty.organizationId],
 		references: [organization.id],
 	}),
 }));
 
-const createSchema = createInsertSchema(ai, {
+const createSchema = createInsertSchema(aiThirdParty, {
 	name: z.string().min(1, { message: "Name is required" }),
+	description: z.string().min(1, { message: "Description is required" }),
 	apiUrl: z.string().url({ message: "Please enter a valid URL" }),
 	apiKey: z.string().min(1, { message: "API Key is required" }),
-	model: z.string().min(1, { message: "Model is required" }),
-	isEnabled: z.boolean().optional(),
+	status: z.boolean().optional(),
 });
 
-export const apiCreateAi = createSchema
+export const apiCreateAiThirdParty = createSchema
 	.pick({
 		name: true,
+		description: true,
 		apiUrl: true,
 		apiKey: true,
-		model: true,
-		isEnabled: true,
+		status: true,
 	})
 	.required();
 
-export const apiUpdateAi = createSchema
+export const apiUpdateAiThirdParty = createSchema
 	.partial()
 	.extend({
-		aiId: z.string().min(1),
+		apiId: z.string().min(1),
 	})
 	.omit({ organizationId: true });
-
-export const deploySuggestionSchema = z.object({
-	projectId: z.string().min(1),
-	id: z.string().min(1),
-	dockerCompose: z.string().min(1),
-	envVariables: z.string(),
-	serverId: z.string().optional(),
-	name: z.string().min(1),
-	description: z.string(),
-	domains: z
-		.array(
-			z.object({
-				host: z.string().min(1),
-				port: z.number().min(1),
-				serviceName: z.string().min(1),
-			}),
-		)
-		.optional(),
-	configFiles: z
-		.array(
-			z.object({
-				filePath: z.string().min(1),
-				content: z.string().min(1),
-			}),
-		)
-		.optional(),
-});

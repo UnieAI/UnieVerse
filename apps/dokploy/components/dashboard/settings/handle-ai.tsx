@@ -138,7 +138,6 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 
 	const onSubmit = async (data: Schema) => {
 		try {
-			// 檢查api key
 			await mutateAsync({
 				...data,
 				aiId: aiId || "",
@@ -146,8 +145,8 @@ export const HandleAi = ({ GenToken, aiId }: HandleAiProps) => {
 
 			utils.ai.getAll.invalidate();
 			toast.success("AI settings saved successfully");
-			refetch();
 			setOpen(false);
+			refetch();
 		} catch (error) {
 			toast.error("Failed to save AI settings", {
 				description: error instanceof Error ? error.message : "Unknown error",

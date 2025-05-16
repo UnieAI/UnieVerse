@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { HandleAi } from "./handle-ai";
 import { HandleLocalAi } from "./handle-local-ai";
 import { HandleUnieInfra } from "./handle-unieinfra";
+import { HandleAiThirdParty } from "./handle-ai-third-party";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
@@ -28,7 +29,8 @@ import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unie
 
 export const AiForm = () => {
 	// aiConfigs 可以 list 出現有的 ai
-	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
+	const { data: aiThirdPartyConfigs, refetch: refetchAiThirdParty, isLoading: isLoadingAiThirdParty } = api.aiThirdParty.getAll.useQuery();
+	const { data: aiConfigs, refetch: refetchAi, isLoading: isLoadingAi } = api.ai.getAll.useQuery();
 	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
 
 	// tokens 可以 list 出現有的 unieinfra tokens
@@ -73,7 +75,7 @@ export const AiForm = () => {
 										: (currentTab === API_TYPES.THIRD_PARTY) ?
 											"Third Party Api Settings"
 											: (currentTab === API_TYPES.AI) ?
-												"舊AI(棄用)"
+												"AI Settings"
 												: "Unknown Settings"
 									}
 								</CardTitle>
@@ -88,7 +90,7 @@ export const AiForm = () => {
 								)}
 							</div>
 
-							<Tabs value={currentTab} defaultValue={API_TYPES.AI} className="flex gap-3" onValueChange={setCurrentTab}>
+							<Tabs value={currentTab} defaultValue={API_TYPES.UNIEINFRA} className="flex gap-3" onValueChange={setCurrentTab}>
 								<TabsList className="w-full justify-start h-12 rounded-none bg-transparent border-b border-zinc-200 dark:border-zinc-800">
 									{TAB_VALUES.map((tabValue: string, index) => (
 										<TabsTrigger
@@ -136,6 +138,14 @@ export const AiForm = () => {
 										</div>
 									)}
 								</>
+							) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+								<>
+									{aiThirdPartyConfigs && aiThirdPartyConfigs?.length > 0 && (
+										<div className="flex gap-3">
+											<HandleAiThirdParty />
+										</div>
+									)}
+								</>
 							) : (
 								<>
 
@@ -145,7 +155,7 @@ export const AiForm = () => {
 
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
-						{(isLoading) ? (
+						{(isLoadingAi || isLoadingAiThirdParty) ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[25vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />
@@ -191,7 +201,7 @@ export const AiForm = () => {
 																		})
 																			.then(() => {
 																				toast.success("AI deleted successfully");
-																				refetch();
+																				refetchAi();
 																			})
 																			.catch(() => {
 																				toast.error("Error deleting AI");
@@ -312,6 +322,67 @@ export const AiForm = () => {
 																		size="icon"
 																		className="group hover:bg-red-500/10 "
 																		disabled={isLoadingTokens}
+																	>
+																		<Trash2 className="size-4 text-primary group-hover:text-red-500" />
+																	</Button>
+																</DialogAction>
+															</div>
+														</div>
+													</div>
+												))}
+											</div>
+										)}
+									</>
+								) : (currentTab === API_TYPES.THIRD_PARTY) ? (
+									<>
+										{aiThirdPartyConfigs?.length === 0 ? (
+											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">
+												<BotIcon className="size-8 self-center text-muted-foreground" />
+												<span className="text-base text-muted-foreground text-center">
+													You don't have any third-party AI configurations
+												</span>
+												<div className="flex gap-3">
+													<HandleAiThirdParty />
+												</div>
+											</div>
+										) : (
+											<div className="flex flex-col gap-4 rounded-lg min-h-[25vh]">
+												{aiThirdPartyConfigs?.map((config) => (
+													<div
+														key={config.apiId}
+														className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
+													>
+														<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
+															<div>
+																<span className="text-sm font-medium">
+																	{config.name}
+																</span>
+																<CardDescription>{config.description}</CardDescription>
+															</div>
+															<div className="flex justify-between items-center">
+																<HandleAiThirdParty apiId={config.apiId} />
+																<DialogAction
+																	title="Delete AI"
+																	description="Are you sure you want to delete this AI?"
+																	type="destructive"
+																	onClick={async () => {
+																		await mutateAsync({
+																			aiId: config.apiId,
+																		})
+																			.then(() => {
+																				toast.success("AI deleted successfully");
+																				refetchAiThirdParty();
+																			})
+																			.catch(() => {
+																				toast.error("Error deleting AI");
+																			});
+																	}}
+																>
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		className="group hover:bg-red-500/10 "
+																		isLoading={isRemoving}
 																	>
 																		<Trash2 className="size-4 text-primary group-hover:text-red-500" />
 																	</Button>
