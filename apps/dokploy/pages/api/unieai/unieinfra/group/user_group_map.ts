@@ -31,6 +31,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = await response.json();
         console.log(`[UnieInfra] groups result:`, result);
 
+        if (!response.ok || result.success === false) {
+            console.error(`[UnieInfra] Failed to list groups:`, result);
+            return res.status(400).json({
+                message: result.message,
+                error: result,
+            });
+        }
+
         // 如果 result.data 是 object，就轉成陣列；不是就回傳 []
         const groups =
             result?.data && typeof result.data === "object"

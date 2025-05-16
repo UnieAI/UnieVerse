@@ -37,6 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const result = await response.json();
             console.log(`[UnieInfra] page ${page} result:`, result);
 
+            if (!response.ok || result.success === false) {
+                console.error(`[UnieInfra] Failed to list tokens on page ${page} result: `, result);
+                return res.status(400).json({
+                    message: result.message,
+                    error: result,
+                });
+            }
+
             const currentPageData = result.data?.data || [];
             totalCount = result.data?.total_count || 0;
 

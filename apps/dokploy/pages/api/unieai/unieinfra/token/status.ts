@@ -33,10 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = await response.json();
         console.log(`[UnieInfra] update token status result:`, result);
 
-        if (!response.ok) {
+        if (!response.ok || result.success === false) {
             console.error(`[UnieInfra] Failed to update token status:`, result);
-            return res.status(response.status).json({
-                message: "UnieInfra update token status failed",
+            return res.status(400).json({
+                message: result.message,
                 error: result,
             });
         }
