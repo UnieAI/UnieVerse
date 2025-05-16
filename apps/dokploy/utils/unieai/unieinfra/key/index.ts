@@ -11,5 +11,5 @@ export const API_TYPES = {
     UNIEINFRA: "UnieInfra",
     Other: "Other",
 }
-export const API_VALUES: string[] = [API_TYPES.AI, API_TYPES.UNIEINFRA, API_TYPES.Other];
-export const TAB_VALUES: string[] = [API_TYPES.AI, API_TYPES.UNIEINFRA];
+export const API_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.AI, API_TYPES.Other];
+export const TAB_VALUES: string[] = [API_TYPES.UNIEINFRA, API_TYPES.AI];
