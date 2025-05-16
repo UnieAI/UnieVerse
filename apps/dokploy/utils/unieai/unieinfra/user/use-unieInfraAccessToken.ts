@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LoginUnieInfra, LoginUnieInfraError } from "./LoginUnieInfra";
-import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key/key";
+import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key";
 
 export const useUnieInfraAccessToken = () => {
     const [isLoading, setIsLoading] = useState(false);

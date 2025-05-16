@@ -36,7 +36,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key/key";
+import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 const Schema = z.object({

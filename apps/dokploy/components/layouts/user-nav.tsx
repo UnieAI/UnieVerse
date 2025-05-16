@@ -26,7 +26,7 @@ import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
 import { UnieInfraConnectionHintPoint } from "@/components/unieai/unieinfra/UnieInfraConnectionHintPoint";
 
-import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key/key";
+import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 

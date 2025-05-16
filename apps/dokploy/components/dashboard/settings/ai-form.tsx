@@ -23,6 +23,7 @@ import { HandleUnieInfra } from "./handle-unieinfra";
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 import { toDatetimeLocalString } from "@/utils/time";
+import { API_TYPES, TAB_VALUES } from "@/utils/unieai/unieinfra/key";
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
 export const AiForm = () => {
@@ -39,16 +40,12 @@ export const AiForm = () => {
 
 	const [openHandleUnieInfra, setOpenHandleUnieInfra] = useState<boolean>(false);
 
-	const tabValues: string[] = ["AI", "UnieInfra Token"];
-	const [currentTab, setCurrentTab] = useState<string>(tabValues[0]!);
-	const handleTabChange = (value: string) => {
-		setCurrentTab(value);
-	};
+	const [currentTab, setCurrentTab] = useState<string>(API_TYPES.UNIEINFRA);
 
 	const GenToken = () => {
 		// 切換至 "UnieInfra Token"
 		console.log(`open GenToken`);
-		setCurrentTab(tabValues[1]!);
+		setCurrentTab(API_TYPES.UNIEINFRA);
 		setOpenHandleUnieInfra(true);
 	}
 
@@ -59,7 +56,7 @@ export const AiForm = () => {
 			}
 		};
 
-		if (currentTab === tabValues[1]!) fetchUnieInfra();
+		if (currentTab === API_TYPES.UNIEINFRA) fetchUnieInfra();
 	}, [currentTab]);
 
 	return (
@@ -71,20 +68,20 @@ export const AiForm = () => {
 							<div>
 								<CardTitle className="text-xl flex flex-row gap-2">
 									<BotIcon className="size-6 text-muted-foreground self-center" />
-									{(currentTab === tabValues[0]!) ? "AI Settings" : (currentTab === tabValues[1]!) ? "UnieInfra Token Settings" : "Unknown Settings"}
+									{(currentTab === API_TYPES.AI) ? "AI Settings" : (currentTab === API_TYPES.UNIEINFRA) ? "UnieInfra Token Settings" : "Unknown Settings"}
 								</CardTitle>
-								{(currentTab === tabValues[0]!) ? (
+								{(currentTab === API_TYPES.AI) ? (
 									<CardDescription>Manage your AI configurations</CardDescription>
-								) : (currentTab === tabValues[1]!) ? (
+								) : (currentTab === API_TYPES.UNIEINFRA) ? (
 									<CardDescription>Manage your UnieInfra Token configurations</CardDescription>
 								) : (
 									<CardDescription>Unknown configurations</CardDescription>
 								)}
 							</div>
 
-							<Tabs value={currentTab} defaultValue={tabValues[0]!} className="flex gap-3" onValueChange={handleTabChange}>
+							<Tabs value={currentTab} defaultValue={API_TYPES.AI} className="flex gap-3" onValueChange={setCurrentTab}>
 								<TabsList className="w-full justify-start h-12 rounded-none bg-transparent border-b border-zinc-200 dark:border-zinc-800">
-									{tabValues.map((tabValue: string, index) => (
+									{TAB_VALUES.map((tabValue: string, index) => (
 										<TabsTrigger
 											key={index}
 											value={tabValue}
@@ -98,7 +95,7 @@ export const AiForm = () => {
 						</div>
 
 						<div className="flex w-full justify-end">
-							{(currentTab === tabValues[0]!) ? (
+							{(currentTab === API_TYPES.AI) ? (
 								<>
 									{aiConfigs && aiConfigs?.length > 0 && (
 										<div className="flex gap-3">
@@ -107,7 +104,7 @@ export const AiForm = () => {
 										</div>
 									)}
 								</>
-							) : (currentTab === tabValues[1]!) ? (
+							) : (currentTab === API_TYPES.UNIEINFRA) ? (
 								<>
 									{tokens && tokens?.length > 0 && (
 										<div className="flex gap-3">
@@ -146,7 +143,7 @@ export const AiForm = () => {
 							</div>
 						) : (
 							<>
-								{(currentTab === tabValues[0]!) ? (
+								{(currentTab === API_TYPES.AI) ? (
 									<>
 										{aiConfigs?.length === 0 ? (
 											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">
@@ -208,7 +205,7 @@ export const AiForm = () => {
 											</div>
 										)}
 									</>
-								) : (currentTab === tabValues[1]!) ? (
+								) : (currentTab === API_TYPES.UNIEINFRA) ? (
 									<>
 										{tokens?.length === 0 ? (
 											<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">

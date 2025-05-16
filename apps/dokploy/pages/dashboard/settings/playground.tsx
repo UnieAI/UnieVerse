@@ -18,6 +18,13 @@ import { toast } from 'sonner'
 import { PanelRight, Send, CircleStop } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { API_TYPES, API_VALUES } from "@/utils/unieai/unieinfra/key";
+
+import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
+import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
+import { apikey } from "@dokploy/server/db/schema";
+import { fa } from "@faker-js/faker";
+
 interface Message {
     role: "system" | "user" | "assistant";
     content: string;
@@ -44,19 +51,39 @@ interface ModelParams {
     echo: boolean
 }
 
+const _defaultModelParams: ModelParams = {
+    temperature: 0.6,
+    max_tokens: 4096,
+    top_p: 1,
+    top_k: 40,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    system_prompt: "",
+    context_length_exceeded_behavior: "none",
+    echo: false
+}
+
 const Page = () => {
 
     const isMobile = useIsMobile();
 
-    const [isOpenOptions, setIsOpenOptions] = useState(true);
+    const [isOpenOptions, setIsOpenOptions] = useState<boolean>(true);
 
-    // https://api2.unieai.com/v1
-    const [apiUrl, setApiUrl] = useState<string>("https://api.exp.unieai.com/v1");
-    // sk-ZpMqU0NAXCmiwYF_krHGFjN5kmmlhc1BBcYuYZO2NKcBh-l1l4NZb6MGusI
-    const [apiToken, setApiToken] = useState<string>("sk-XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc");
-    const [models, setModels] = useState<any>([]);
-    const [model, setModel] = useState<string>(""); // 預設 model
-    const [threadModels, setThreadModels] = useState<string[]>([]); // 每個 thread 可選自己的 model
+    const [currentApiType, setCurrentApiType] = useState<string>(API_TYPES.UNIEINFRA);
+
+    const {
+        accessToken,
+        getTokens,
+    } = useUnieInfra();
+
+    const [apiUrl, setApiUrl] = useState<string>("");
+    const [apiToken, setApiToken] = useState<string>("");
+    const [models, setModels] = useState<string[]>([]);
+
+    // 預設 model
+    const [defaultModel, setDefaultModel] = useState<string>("");
+    // 預設 llm api 參數
+    const [defaultModelParams, setDefaultModelParams] = useState<ModelParams>(_defaultModelParams);
 
     // 嘗試取得前端瀏覽器最大併發數量
     const [maxConcurrency, setMaxConcurrency] = useState(0);
@@ -71,7 +98,10 @@ const Page = () => {
     const [selectedIndexes, setSelectedIndexes] = useState<number[]>([1]);
 
     // 儲存訊息
-    const [parallelMessages, setParallelMessages] = useState<Message[]>([]);
+    const [parallelMessages, setParallelMessages] = useState<Message[]>([]);  // 每個 thread 的 Message list
+    const [threadModels, setThreadModels] = useState<string[]>([]); // 每個 thread 可選自己的 model
+    const [editParams, setEditParams] = useState<number>(0); // 編輯中的 id, default = 0;
+    const [threadModelParams, setThreadModelParams] = useState<ModelParams[]>([]); // 每個 thread 的 llm api 參數
 
     // 狀態
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -82,19 +112,6 @@ const Page = () => {
 
     // 訊息暫存輸入值
     const [message, setMessage] = useState<string>("");
-
-    // llm api 參數
-    const [modelParams, setModelParams] = useState<ModelParams>({
-        temperature: 0.6,
-        max_tokens: 4096,
-        top_p: 1,
-        top_k: 40,
-        presence_penalty: 0,
-        frequency_penalty: 0,
-        system_prompt: "",
-        context_length_exceeded_behavior: "none",
-        echo: false
-    });
 
     const testConcurrency = async () => {
         setIsLoading(true);
@@ -132,7 +149,7 @@ const Page = () => {
         const clusterWindow = 250; // ms 範圍內算同一批
 
         for (let i = 0; i < results.length; i++) {
-            const center = results[i].responseStartTime;
+            const center = results[i]!.responseStartTime;
             const count = results.filter(r =>
                 r.responseStartTime >= center &&
                 r.responseStartTime < center + clusterWindow
@@ -152,11 +169,13 @@ const Page = () => {
     const handleRefreshModels = async () => {
         if (!apiUrl || !apiToken) {
             toast.error("Please enter both API URL and Token.");
+            resetModels();
             return;
         }
 
         if (isLoading || isReplying) {
             toast.error(`please wait...`);
+            resetModels();
             return;
         }
 
@@ -170,14 +189,17 @@ const Page = () => {
             });
 
             if (!response.ok) {
+                resetModels();
                 throw new Error(`API call failed with status ${response.status}`);
             }
 
             const data = await response.json();
-            const modelIds = data.data.map((m: any) => m.id); // 提取 id
+            const modelIds: string[] = data.data.map((m: any) => m.id); // 提取 id
             setModels(modelIds);
+            if (modelIds.length === 0) resetModels();
             toast.success("Models fetched successfully!");
         } catch (err: any) {
+            resetModels();
             toast.error("Failed to fetch models: " + err.message);
         } finally {
             setIsLoading(false);
@@ -190,7 +212,7 @@ const Page = () => {
             return;
         }
 
-        if (threadModels.some(m => m === "") && model === "") {
+        if (threadModels.some(m => m === "") && defaultModel === "") {
             toast.error("At least one thread has no model selected, and no default model is set.");
             return;
         }
@@ -248,14 +270,14 @@ const Page = () => {
                     );
 
                     // 插入 system prompt（如果有）
-                    const messages = modelParams.system_prompt?.trim()
-                        ? [{ role: "system", content: modelParams.system_prompt }, ...history]
+                    const messages = defaultModelParams.system_prompt?.trim()
+                        ? [{ role: "system", content: defaultModelParams.system_prompt }, ...history]
                         : history;
 
                     const payload = JSON.stringify({
-                        model: threadModels[index] || model,
+                        model: threadModels[index] || defaultModel,
                         messages,
-                        ...modelParams,
+                        ...defaultModelParams,
                         stream: true,
                     });
 
@@ -429,7 +451,7 @@ const Page = () => {
         setIsLoading(false);
     };
 
-    const handleResetChatRoom = () => {
+    const handleResetChatRoom = (resetModelParams: boolean) => {
         abortControllers();
         setParallelMessages([]);
         setMessage('');
@@ -441,33 +463,75 @@ const Page = () => {
             Array.from({ length: Math.min(maxSelectIndex, parallelCount) }, (_, i) => i)
         );
 
-        setThreadModels((prev) => {
-            let updated = [...prev];
+        // 預設選擇 0
+        setEditParams(0);
 
-            // 補足長度
-            while (updated.length < parallelCount) {
-                updated.push("");
-            }
+        if (!resetModelParams) {
+            setThreadModels((prev) => {
+                let updated = [...prev];
 
-            // 如果長度太長，刪除多餘的值
-            if (updated.length > parallelCount) {
-                updated = updated.slice(0, parallelCount);
-            }
-
-            // 清除不存在於 models 的值
-            for (let i = 0; i < updated.length; i++) {
-                if (updated[i] && !models.includes(updated[i])) {
-                    updated[i] = "";
+                // 補足長度
+                while (updated.length < parallelCount) {
+                    updated.push("");
                 }
-            }
 
-            return updated;
-        });
+                // 如果長度太長，刪除多餘的值
+                if (updated.length > parallelCount) {
+                    updated = updated.slice(0, parallelCount);
+                }
+
+                // 清除不存在於 models 的值
+                for (let i = 0; i < updated.length; i++) {
+                    if (updated[i] && !models.includes(updated[i]!)) {
+                        updated[i] = "";
+                    }
+                }
+
+                return updated;
+            });
+
+            setThreadModelParams((prev) => {
+                let updated = [...prev];
+
+                // 補足長度
+                while (updated.length < parallelCount) {
+                    updated.push(_defaultModelParams);
+                }
+
+                // 如果長度太長，刪除多餘的值
+                if (updated.length > parallelCount) {
+                    updated = updated.slice(0, parallelCount);
+                }
+
+                return updated;
+            });
+        } else {
+            setThreadModels(() => {
+                let newModelParams: string[] = [];
+
+                // 補足長度
+                while (newModelParams.length < parallelCount) {
+                    newModelParams.push("");
+                }
+
+                return newModelParams;
+            });
+
+            setThreadModelParams(() => {
+                let newModelParams: ModelParams[] = [];
+
+                // 補足長度
+                while (newModelParams.length < parallelCount) {
+                    newModelParams.push(_defaultModelParams);
+                }
+
+                return newModelParams;
+            });
+
+            setDefaultModel("");
+            setDefaultModelParams(_defaultModelParams);
+        }
     };
-
-    useEffect(() => {
-        if (!isLoading && !isReplying) handleRefreshModels();
-    }, []);
 
     useEffect(() => {
         let currentIndex = isMobile ? 2 : 3;
@@ -481,8 +545,51 @@ const Page = () => {
     useEffect(() => {
         if (!isLoading && !isReplying) testConcurrency();
 
-        handleResetChatRoom();
+        handleResetChatRoom(false);
     }, [parallelCount]);
+
+    useEffect(() => {
+        const fetchUnieInfra = async () => {
+            if (currentApiType === API_TYPES.AI) {
+
+            }
+            else if (currentApiType === API_TYPES.UNIEINFRA) {
+                setApiUrl(UNIEINFRA_OPENAI_API_URL);
+                if (accessToken !== null) await getTokens(accessToken);
+            } else if (currentApiType === API_TYPES.Other) {
+                setApiUrl("");
+                setApiToken("");
+            }
+        };
+
+        fetchUnieInfra();
+    }, [currentApiType]);
+
+    useEffect(() => {
+        const fetchModels = async () => {
+            if (apiUrl && apiToken) {
+                if (!isLoading && !isReplying) {
+                    await handleRefreshModels();
+                }
+            }
+        }
+        if (isOpenOptions) fetchModels();
+    }, [isOpenOptions, apiUrl, apiToken]);
+
+    const resetModels = () => {
+        setModels([]);
+        setThreadModels(() => {
+            let newModelParams: string[] = [];
+
+            // 補足長度
+            while (newModelParams.length < parallelCount) {
+                newModelParams.push("");
+            }
+
+            return newModelParams;
+        });
+        setDefaultModel("");
+    }
 
     return (
         <div className="relative flex h-[90vh] gap-4 w-full">
@@ -491,7 +598,7 @@ const Page = () => {
                     {selectedIndexes.map((index, idx) => (
                         <React.Fragment key={index}>
                             <div className="relative flex-1 p-4 overflow-auto">
-                                <MessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={model} models={models} />
+                                <MessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={defaultModel} models={models} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
                                 <div className={`w-px ${isMobile && "mx-2"} bg-zinc-100 dark:bg-zinc-900`} />
@@ -541,323 +648,45 @@ const Page = () => {
             </div>
 
             {/* options */}
-            <AnimatePresence>
-                {isOpenOptions && (
-                    <motion.div
-                        key="options-panel"
-                        initial={{ x: '100%', opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: '100%', opacity: 0 }}
-                        transition={{ type: 'tween', duration: 0.3 }}
-                        className={`${isMobile ? "w-full" : "w-1/4"} p-4 rounded-lg border-l space-y-6 overflow-auto absolute right-0 top-0 bottom-0 bg-white dark:bg-zinc-900 z-20 shadow-lg`}
-                    >
-                        {/* Title */}
-                        <div className="flex flex-row justify-between items-center">
-                            <h3 className="text-lg font-semibold">Options</h3>
-                        </div>
+            <SideBar
+                currentApiType={currentApiType}
+                setCurrentApiType={setCurrentApiType}
+                isOpenOptions={isOpenOptions}
+                isMobile={isMobile}
+                isLoading={isLoading}
+                isReplying={isReplying}
+                // api settings
+                apiUrl={apiUrl}
+                setApiUrl={setApiUrl}
+                apiToken={apiToken}
+                setApiToken={setApiToken}
+                handleRefreshModels={handleRefreshModels}
+                models={models}
+                setModels={setModels}
+                // chat rooms
+                handleResetChatRoom={handleResetChatRoom}
+                maxCount={maxCount}
+                maxSelectIndex={maxSelectIndex}
+                parallelCount={parallelCount}
+                setParallelCount={setParallelCount}
+                tempParallelCount={tempParallelCount}
+                setTempParallelCount={setTempParallelCount}
+                threadModels={threadModels}
+                setThreadModels={setThreadModels}
+                parallelMessages={parallelMessages}
+                // render msgs
+                selectedIndexes={selectedIndexes}
+                setSelectedIndexes={setSelectedIndexes}
+                // default
+                editParams={editParams}
+                setEditParams={setEditParams}
+                defaultModel={defaultModel}
+                setDefaultModel={setDefaultModel}
+                defaultModelParams={defaultModelParams}
+                setDefaultModelParams={setDefaultModelParams}
 
-                        {/* LLM api settings */}
-                        <div className="space-y-2">
-                            <label className="text-sm">API URL</label>
-                            <input
-                                type="text"
-                                value={apiUrl}
-                                onChange={(e) => setApiUrl(e.target.value)}
-                                placeholder="https://your-api.com"
-                                className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                            />
+            />
 
-                            <label className="text-sm">API Token</label>
-                            <input
-                                type="password"
-                                value={apiToken}
-                                onChange={(e) => setApiToken(e.target.value)}
-                                placeholder="sk-xxxx"
-                                className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                            />
-
-                            <Button
-                                onClick={() => handleRefreshModels()}
-                                className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                disabled={isLoading || isReplying}
-                            >
-                                Refresh Models
-                            </Button>
-                        </div>
-
-                        {/* Select model */}
-                        <div className="space-y-2">
-                            <label className="text-sm flex flex-col">
-                                <span>Select Default Model</span>
-                                {(threadModels.some(m => m === "") && model === "") && (
-                                    <span className="text-red-500">please set default model.</span>
-                                )}
-                            </label>
-                            <select
-                                className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                            >
-                                <option value="" disabled>Select a model</option>
-                                {models.map((id: string) => (
-                                    <option key={id} value={id}>{id}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Parallel instances */}
-                        <div className="space-y-2">
-                            <label className="text-sm">Parallel Instances</label>
-                            <div className="flex flex-row gap-2">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={maxCount}
-                                    value={tempParallelCount}
-                                    onChange={(e) => setTempParallelCount(Number(e.target.value))}
-                                    disabled={isLoading || isReplying}
-                                    className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                                />
-                                <Button
-                                    onClick={() => {
-                                        setParallelCount(tempParallelCount);
-                                        toast.success(`Parallel instances set to ${tempParallelCount}.`);
-                                    }}
-                                    className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                    disabled={isLoading || isReplying}
-                                >
-                                    Set Parallel Instances
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Show thread btn */}
-                        <div className="space-y-2">
-                            <label className="text-sm">Show Threads</label>
-                            <div className="grid grid-cols-5 gap-2">
-                                {Array.from({ length: parallelCount }, (_, index) => (
-                                    <Button
-                                        key={index}
-                                        onClick={() => {
-                                            setSelectedIndexes(prev => {
-                                                if (prev.includes(index)) {
-                                                    return prev.filter(p => p !== index);
-                                                } else {
-                                                    if (prev.length >= maxSelectIndex) {
-                                                        return [...prev.slice(1), index]; // 移除最早的
-                                                    } else {
-                                                        return [...prev, index];
-                                                    }
-                                                }
-                                            });
-                                        }}
-                                        className={`px-2 py-1 text-sm
-                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
-                                        ${selectedIndexes.includes(index) ? "border-4 border-zinc-500" : "border-2"}
-                                        `}
-                                    >
-                                        #{index + 1}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Summary for each thread */}
-                        {(parallelMessages.length > 0) && (
-                            <div className="space-y-2 w-full">
-                                <label className="text-sm">Threads Summary (Last Assistant Response)</label>
-                                <div className="space-y-2 w-full">
-                                    {parallelMessages.map((messages, index) => {
-                                        const last = [...messages].reverse().find(msg => msg.role === 'assistant');
-                                        return (
-                                            <Button
-                                                key={index}
-                                                className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
-                                                px-2 py-1 text-sm flex-1
-                                                bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
-                                                ${selectedIndexes.includes(index) ? "border-4" : "border-2"}
-                                                ${last?.state === "complete"
-                                                        ? "border-green-400 dark:border-green-600"
-                                                        : last?.state === "streaming"
-                                                            ? "border-yellow-400 dark:border-yellow-600"
-                                                            : last?.state === "error"
-                                                                ? "border-red-400 dark:border-red-600"
-                                                                : last?.state === "abort"
-                                                                    ? "border-orange-400 dark:border-orange-600"
-                                                                    : "border-zinc-400 dark:border-zinc-600"}`}
-                                                onClick={() => {
-                                                    setSelectedIndexes(prev => {
-                                                        if (prev.includes(index)) {
-                                                            return prev.filter(p => p !== index);
-                                                        } else {
-                                                            if (prev.length >= maxSelectIndex) {
-                                                                return [...prev.slice(1), index]; // 移除最早的
-                                                            } else {
-                                                                return [...prev, index];
-                                                            }
-                                                        }
-                                                    });
-                                                }}
-                                            >
-                                                <div className="flex flex-row gap-2">
-                                                    <div className="text-sm">#{index + 1}</div>
-                                                    <div className="text-sm">{
-                                                        (() => {
-                                                            const modelName = threadModels[index] || model;
-                                                            return modelName.length > 10
-                                                                ? modelName.slice(0, 10) + "..."
-                                                                : modelName;
-                                                        })()
-                                                    }</div>
-
-                                                </div>
-                                                {last && (
-                                                    <>
-                                                        {last.durationMs != null && (
-                                                            <div>
-                                                                <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
-                                                                <span className="text-xs ml-1">chars/sec</span>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Reset chat room btn */}
-                        <div className="space-y-2">
-                            <label className="text-sm">Reset Chat Room</label>
-                            <Button
-                                onClick={() => handleResetChatRoom()}
-                                className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                disabled={isLoading || isReplying}
-                            >
-                                Reset
-                            </Button>
-                        </div>
-
-                        {/* LLM api payload */}
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Temperature</label>
-                                    <Badge variant="secondary">{modelParams.temperature}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.temperature]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, temperature: value }))}
-                                    max={1}
-                                    step={0.1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Max Tokens</label>
-                                    <Badge variant="secondary">{modelParams.max_tokens}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.max_tokens]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, max_tokens: value }))}
-                                    max={8000}
-                                    step={1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Top P</label>
-                                    <Badge variant="secondary">{modelParams.top_p}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.top_p]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_p: value }))}
-                                    max={1}
-                                    step={0.1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Top K</label>
-                                    <Badge variant="secondary">{modelParams.top_k}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.top_k]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, top_k: value }))}
-                                    max={100}
-                                    step={1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Presence Penalty</label>
-                                    <Badge variant="secondary">{modelParams.presence_penalty}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.presence_penalty]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, presence_penalty: value }))}
-                                    max={2}
-                                    step={0.1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <label className="text-sm">Frequency Penalty</label>
-                                    <Badge variant="secondary">{modelParams.frequency_penalty}</Badge>
-                                </div>
-                                <Slider
-                                    value={[modelParams.frequency_penalty]}
-                                    onValueChange={([value]) => setModelParams(prev => ({ ...prev, frequency_penalty: value }))}
-                                    max={2}
-                                    step={0.1}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm">System Prompt</label>
-                                <AutoResizeTextarea
-                                    value={modelParams.system_prompt}
-                                    onChange={(e) => setModelParams(prev => ({ ...prev, system_prompt: e.target.value }))}
-                                    placeholder={"enter a system prompt..."}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm">Context Length Exceeded Behavior</label>
-                                <select
-                                    className="w-full mt-1 p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
-                                    value={modelParams.context_length_exceeded_behavior}
-                                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                                        setModelParams(prev => ({ ...prev, context_length_exceeded_behavior: event.target.value }))
-                                    }}
-                                >
-                                    <option value="none">None</option>
-                                    <option value="truncate">Truncate</option>
-                                    <option value="error">Error</option>
-                                </select>
-                            </div>
-
-                            <div className="flex flex-row items-center gap-2">
-                                <>
-                                    <Checkbox
-                                        id="echo"
-                                        checked={modelParams.echo}
-                                        onCheckedChange={(checked) => setModelParams(prev => ({ ...prev, echo: checked as boolean }))}
-                                    />
-                                    <label htmlFor="echo" className="text-sm">Echo</label>
-                                </>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
             <div className="absolute -top-12 right-0">
                 <Button
                     data-sidebar="trigger"
@@ -919,6 +748,545 @@ export async function getServerSideProps(
 }
 
 // --- Eric Components --- //
+
+interface SideBarProps {
+    currentApiType: string;
+    setCurrentApiType: React.Dispatch<React.SetStateAction<string>>;
+    isOpenOptions: boolean;
+    isMobile: boolean;
+    isLoading: boolean;
+    isReplying: boolean;
+    // api settings
+    apiUrl: string;
+    setApiUrl: React.Dispatch<React.SetStateAction<string>>;
+    apiToken: string;
+    setApiToken: React.Dispatch<React.SetStateAction<string>>;
+    handleRefreshModels: () => void;
+    models: string[];
+    setModels: React.Dispatch<React.SetStateAction<string[]>>;
+    // chat rooms
+    handleResetChatRoom: (resetModelParams: boolean) => void;
+    maxCount: number;
+    maxSelectIndex: number;
+    parallelCount: number;
+    setParallelCount: (value: React.SetStateAction<number>) => void;
+    tempParallelCount: number;
+    setTempParallelCount: (value: React.SetStateAction<number>) => void;
+    threadModels: string[];
+    setThreadModels: (value: React.SetStateAction<string[]>) => void;
+    parallelMessages: Message[];
+    // render msgs
+    selectedIndexes: number[];
+    setSelectedIndexes: React.Dispatch<React.SetStateAction<number[]>>;
+    // default
+    editParams: number;
+    setEditParams: React.Dispatch<React.SetStateAction<number>>;
+    defaultModel: string;
+    setDefaultModel: React.Dispatch<React.SetStateAction<string>>;
+    defaultModelParams: ModelParams;
+    setDefaultModelParams: React.Dispatch<React.SetStateAction<ModelParams>>;
+
+}
+
+const SideBar = ({
+    currentApiType,
+    setCurrentApiType,
+    isOpenOptions,
+    isMobile,
+    isLoading,
+    isReplying,
+    // api settings
+    apiUrl,
+    setApiUrl,
+    apiToken,
+    setApiToken,
+    handleRefreshModels,
+    models,
+    setModels,
+    // chat rooms
+    handleResetChatRoom,
+    maxCount,
+    maxSelectIndex,
+    parallelCount,
+    setParallelCount,
+    tempParallelCount,
+    setTempParallelCount,
+    threadModels,
+    setThreadModels,
+    parallelMessages,
+    // render msgs
+    selectedIndexes,
+    setSelectedIndexes,
+    // default
+    editParams,
+    setEditParams,
+    defaultModel,
+    setDefaultModel,
+    defaultModelParams,
+    setDefaultModelParams,
+
+}: SideBarProps) => {
+
+    const {
+        tokens,
+    } = useUnieInfra();
+
+    return (
+        <AnimatePresence>
+            {isOpenOptions && (
+                <motion.div
+                    key="options-panel"
+                    initial={{ x: '100%', opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: '100%', opacity: 0 }}
+                    transition={{ type: 'tween', duration: 0.3 }}
+                    className={`${isMobile ? "w-full" : "w-1/4"} p-4 rounded-lg border-l space-y-6 overflow-auto absolute right-0 top-0 bottom-0 bg-white dark:bg-zinc-900 z-20 shadow-lg`}
+                >
+                    {/* Title */}
+                    <div className="flex flex-row justify-between items-center gap-2">
+                        <h3 className="flex text-lg font-semibold">API Options</h3>
+                        <select
+                            className="w-1/2 p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                            value={currentApiType}
+                            onChange={(e) => setCurrentApiType(e.target.value)}
+                        >
+                            <option value="" disabled>Select api type</option>
+                            {API_VALUES.map((_str: string, _idx) => (
+                                <option
+                                    key={_idx}
+                                    value={_str}
+                                    disabled={(_str === API_TYPES.AI)} // 暫不開放
+                                >
+                                    {(_str === API_TYPES.AI) ? "AI Settings (coming soon...)" : (_str === API_TYPES.UNIEINFRA) ? "UnieInfra Token" : (_str === API_TYPES.Other) && "Other API"}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* LLM api settings */}
+                    <div className="space-y-2">
+                        {(currentApiType === API_TYPES.AI) ? (
+                            <>
+
+                            </>
+                        ) : (currentApiType === API_TYPES.UNIEINFRA) ? (
+                            <>
+                                <label className="text-sm">UnieInfra API Token</label>
+                                <select
+                                    className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                    value={apiToken}
+                                    onChange={(e) => setApiToken(e.target.value)}
+                                >
+                                    <option value="" disabled>Select UnieInfra api token</option>
+                                    {tokens.map((token: any) => (
+                                        <option
+                                            key={token.id}
+                                            value={`sk-${token.key}`}
+                                        >
+                                            {token.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        ) : (currentApiType === API_TYPES.Other) && (
+                            <>
+                                <label className="text-sm flex flex-col">
+                                    <span>API URL</span>
+                                    {apiUrl && !apiUrl.endsWith('/v1') && (
+                                        <span className="text-red-500">API URL must end with <code>/v1</code></span>
+                                    )}
+                                </label>
+
+                                <input
+                                    type="text"
+                                    value={apiUrl}
+                                    onChange={(e) => setApiUrl(e.target.value)}
+                                    placeholder="https://your-api.com/v1"
+                                    className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                                />
+
+                                <label className="text-sm">API Token</label>
+                                <input
+                                    type="password"
+                                    value={apiToken}
+                                    onChange={(e) => setApiToken(e.target.value)}
+                                    placeholder="sk-xxxx"
+                                    className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                                />
+
+                                <Button
+                                    onClick={() => handleRefreshModels()}
+                                    className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                    disabled={isLoading || isReplying}
+                                >
+                                    Refresh Models
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
+                    {(models.length > 0) ? (
+                        <>
+                            <div className="h-px my-1 bg-zinc-400  dark:bg-zinc-600" />
+                            <h3 className="text-lg font-semibold">Chat Room Settings</h3>
+
+                            {/* Parallel instances */}
+                            <div className="space-y-2">
+                                <label className="text-sm">Parallel Instances</label>
+                                <div className="flex flex-row gap-2">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={maxCount}
+                                        value={tempParallelCount}
+                                        onChange={(e) => setTempParallelCount(Number(e.target.value))}
+                                        disabled={isLoading || isReplying}
+                                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                                    />
+                                    <Button
+                                        onClick={() => {
+                                            setParallelCount(tempParallelCount);
+                                            toast.success(`Parallel instances set to ${tempParallelCount}.`);
+                                        }}
+                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                        disabled={isLoading || isReplying || (parallelCount === tempParallelCount)}
+                                    >
+                                        Set Parallel Instances
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Show thread btn */}
+                            <div className="space-y-2">
+                                <label className="text-sm">Show Threads</label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {Array.from({ length: parallelCount }, (_, index) => (
+                                        <Button
+                                            key={index}
+                                            onClick={() => {
+                                                setSelectedIndexes(prev => {
+                                                    if (prev.includes(index)) {
+                                                        return prev.filter(p => p !== index);
+                                                    } else {
+                                                        if (prev.length >= maxSelectIndex) {
+                                                            return [...prev.slice(1), index]; // 移除最早的
+                                                        } else {
+                                                            return [...prev, index];
+                                                        }
+                                                    }
+                                                });
+                                            }}
+                                            className={`px-2 py-1 text-sm
+                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
+                                        ${selectedIndexes.includes(index) ? "border-4 border-zinc-500" : "border-2"}
+                                        `}
+                                        >
+                                            #{index + 1}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Summary for each thread */}
+                            {(parallelMessages.length > 0) && (
+                                <div className="space-y-2 w-full">
+                                    <label className="text-sm">Threads Summary (Last Assistant Response)</label>
+                                    <div className="space-y-2 w-full">
+                                        {parallelMessages.map((messages, index) => {
+                                            const last = [...messages].reverse().find(msg => msg.role === 'assistant');
+                                            return (
+                                                <Button
+                                                    key={index}
+                                                    className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
+                                                px-2 py-1 text-sm flex-1
+                                                bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
+                                                ${selectedIndexes.includes(index) ? "border-4" : "border-2"}
+                                                ${last?.state === "complete"
+                                                            ? "border-green-400 dark:border-green-600"
+                                                            : last?.state === "streaming"
+                                                                ? "border-yellow-400 dark:border-yellow-600"
+                                                                : last?.state === "error"
+                                                                    ? "border-red-400 dark:border-red-600"
+                                                                    : last?.state === "abort"
+                                                                        ? "border-orange-400 dark:border-orange-600"
+                                                                        : "border-zinc-400 dark:border-zinc-600"}`}
+                                                    onClick={() => {
+                                                        setSelectedIndexes(prev => {
+                                                            if (prev.includes(index)) {
+                                                                return prev.filter(p => p !== index);
+                                                            } else {
+                                                                if (prev.length >= maxSelectIndex) {
+                                                                    return [...prev.slice(1), index]; // 移除最早的
+                                                                } else {
+                                                                    return [...prev, index];
+                                                                }
+                                                            }
+                                                        });
+                                                    }}
+                                                >
+                                                    <div className="flex flex-row gap-2">
+                                                        <div className="text-sm">#{index + 1}</div>
+                                                        <div className="text-sm">{
+                                                            (() => {
+                                                                const modelName = threadModels[index] || defaultModel;
+                                                                return modelName.length > 10
+                                                                    ? modelName.slice(0, 10) + "..."
+                                                                    : modelName;
+                                                            })()
+                                                        }</div>
+
+                                                    </div>
+                                                    {last && (
+                                                        <>
+                                                            {last.durationMs != null && (
+                                                                <div>
+                                                                    <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
+                                                                    <span className="text-xs ml-1">chars/sec</span>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Reset chat room btn */}
+                            <div className="space-y-2">
+                                <label className="text-sm">Reset Chat Room</label>
+                                <div className="flex flex-row gap-2">
+                                    <Button
+                                        onClick={() => handleResetChatRoom(false)}
+                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                        disabled={isLoading || isReplying}
+                                    >
+                                        Reset Msg
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleResetChatRoom(true)}
+                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                        disabled={isLoading || isReplying}
+                                    >
+                                        Reset Msg & Params
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="h-px my-1 bg-zinc-400  dark:bg-zinc-600" />
+
+                            {/* model params payload */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">Model Params Payload</h3>
+
+                                <div className="grid grid-cols-5 gap-2">
+                                    <Button
+                                        key={0}
+                                        onClick={() => setEditParams(0)}
+                                        className={`px-2 py-1 text-sm
+                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
+                                        ${(editParams === 0) ? "border-4 border-zinc-500" : "border-2"}
+                                        `}
+                                    >
+                                        default
+                                    </Button>
+                                    {Array.from({ length: parallelCount }, (_, index) => (
+                                        <Button
+                                            key={(index + 1)}
+                                            onClick={() => setEditParams(index + 1)}
+                                            className={`px-2 py-1 text-sm
+                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
+                                        ${(editParams === (index + 1)) ? "border-4 border-zinc-500" : "border-2"}
+                                        `}
+                                        >
+                                            #{index + 1}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                <div className="h-px my-1 bg-zinc-200  dark:bg-zinc-800" />
+
+                                {(editParams === 0) ? (
+                                    <>
+                                        {/* Select default model */}
+                                        <div className="space-y-2">
+                                            <label className="text-sm flex flex-col">
+                                                <span>Select Default Model</span>
+                                                {(threadModels.some(m => m === "") && defaultModel === "") && (
+                                                    <span className="text-red-500">please set default model.</span>
+                                                )}
+                                            </label>
+                                            <select
+                                                className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                                value={defaultModel}
+                                                onChange={(e) => setDefaultModel(e.target.value)}
+                                            >
+                                                <option value="" disabled>Select a model</option>
+                                                {models.map((id: string) => (
+                                                    <option key={id} value={id}>{id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Select model */}
+                                        <div className="space-y-2">
+                                            <label className="text-sm flex flex-col">
+                                                <span>Select Chat Room {editParams} Model</span>
+                                            </label>
+                                            <select
+                                                className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                                value={threadModels[editParams - 1]}
+                                                onChange={(e) => {
+                                                    const newModels = [...threadModels];
+                                                    newModels[editParams - 1] = e.target.value;
+                                                    setThreadModels(newModels);
+                                                }}
+                                            >
+                                                <option value="" disabled>Select a model</option>
+                                                {models.map((id: string) => (
+                                                    <option key={id} value={id}>{id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="h-px my-1 bg-zinc-200  dark:bg-zinc-800" />
+
+                                {/* Select default system prompt */}
+                                <div className="space-y-2">
+                                    <label className="text-sm">System Prompt</label>
+                                    <AutoResizeTextarea
+                                        value={defaultModelParams.system_prompt}
+                                        onChange={(e) => setDefaultModelParams(prev => ({ ...prev, system_prompt: e.target.value }))}
+                                        placeholder={"enter a system prompt..."}
+                                    />
+                                </div>
+
+                                {/* Select default temperature */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Temperature</label>
+                                        <Badge variant="secondary">{defaultModelParams.temperature}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.temperature]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, temperature: value }))}
+                                        max={1}
+                                        step={0.1}
+                                    />
+                                </div>
+
+                                {/* Select default max tokens */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Max Tokens</label>
+                                        <Badge variant="secondary">{defaultModelParams.max_tokens}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.max_tokens]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, max_tokens: value }))}
+                                        max={8000}
+                                        step={1}
+                                    />
+                                </div>
+
+                                {/* Select default Top P */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Top P</label>
+                                        <Badge variant="secondary">{defaultModelParams.top_p}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.top_p]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, top_p: value }))}
+                                        max={1}
+                                        step={0.1}
+                                    />
+                                </div>
+
+                                {/* Select default Top K */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Top K</label>
+                                        <Badge variant="secondary">{defaultModelParams.top_k}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.top_k]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, top_k: value }))}
+                                        max={100}
+                                        step={1}
+                                    />
+                                </div>
+
+                                {/* Select default presence penalty */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Presence Penalty</label>
+                                        <Badge variant="secondary">{defaultModelParams.presence_penalty}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.presence_penalty]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, presence_penalty: value }))}
+                                        max={2}
+                                        step={0.1}
+                                    />
+                                </div>
+
+                                {/* Select default frequency penalty */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <label className="text-sm">Frequency Penalty</label>
+                                        <Badge variant="secondary">{defaultModelParams.frequency_penalty}</Badge>
+                                    </div>
+                                    <Slider
+                                        value={[defaultModelParams.frequency_penalty]}
+                                        onValueChange={([value]) => setDefaultModelParams(prev => ({ ...prev, frequency_penalty: value }))}
+                                        max={2}
+                                        step={0.1}
+                                    />
+                                </div>
+
+                                {/* Select default context length exceeded behavior */}
+                                <div className="space-y-2">
+                                    <label className="text-sm">Context Length Exceeded Behavior</label>
+                                    <select
+                                        className="w-full mt-1 p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                                        value={defaultModelParams.context_length_exceeded_behavior}
+                                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                                            setDefaultModelParams(prev => ({ ...prev, context_length_exceeded_behavior: event.target.value }))
+                                        }}
+                                    >
+                                        <option value="none">None</option>
+                                        <option value="truncate">Truncate</option>
+                                        <option value="error">Error</option>
+                                    </select>
+                                </div>
+
+                                {/* Select default echo */}
+                                <div className="flex flex-row items-center gap-2">
+                                    <>
+                                        <Checkbox
+                                            id="echo"
+                                            checked={defaultModelParams.echo}
+                                            onCheckedChange={(checked) => setDefaultModelParams(prev => ({ ...prev, echo: checked as boolean }))}
+                                        />
+                                        <label htmlFor="echo" className="text-sm">Echo</label>
+                                    </>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <label className="text-sm text-red-500">This API doesn't have any models.</label>
+                    )}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    )
+}
 
 interface MessageRenderProps {
     thread: number;
@@ -1366,6 +1734,31 @@ const LinkComponent = ({ url }: { url: string }) => {
     );
 };
 
+const UnieAISVG = (
+    { className }: { className?: string }
+) => {
+    return (
+        <svg
+            className={`${className} fill-current`}
+            version="1.1"
+            id="_圖層_1"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlnsXlink="http://www.w3.org/1999/xlink"
+            x="0px"
+            y="0px"
+            viewBox="0 0 499.28 444.55"
+            xmlSpace="preserve"
+        >
+            <path
+                className="uuid-9652422c-9824-4901-a3f6-837eb0813328"
+                d="m496.58,432.3c-7.44-13.21-219.4-145.81-455.36-17.82,0,0-3.98-2.73,6.18-10.69,9.96-7.86,49.58-32.18,124.43-55.66,74.74-26.21,149.17-29.56,177.26-130.4,58.7,18.55,86.06,48.64,84.7,63.21-1.68,16.98-18.34,26.73-29.98,31.66-11.01,4.72-17.09,7.86-15.51,11.43,2.73,5.87,59.02,9.43,70.23-41.83,4.51-46.86-64.15-80.82-108.39-90.57C356.01,4.82,176.23,0,176.23,0c-26.42,126,59.44,196.86,146.65,212.58,0,0-14.68,52.2-64.78,82.5C199.82,330.2,51.8,331.98.65,432.3c-2.52,5.03,1.57,15.62,24.74,7.34,284.39-108.07,443.93.73,461.54,4.19,9.01,1.78,16.67,1.05,9.54-11.53h.1ZM199.92,28.62s132.18,22.54,125.58,159.54c0,0-124.74-11.95-125.58-159.54Z"
+            />
+        </svg>
+    );
+};
+
+// --- Eric Finctions --- //
+
 // 複製圖片 URL 函數
 const copyImageLink = (url: string) => {
     navigator.clipboard.writeText(url)
@@ -1397,31 +1790,6 @@ function normalizeYouTubeUrl(url: string) {
     }
     return _url;
 }
-
-const UnieAISVG = (
-    { className }: { className?: string }
-) => {
-    return (
-        <svg
-            className={`${className} fill-current`}
-            version="1.1"
-            id="_圖層_1"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlnsXlink="http://www.w3.org/1999/xlink"
-            x="0px"
-            y="0px"
-            viewBox="0 0 499.28 444.55"
-            xmlSpace="preserve"
-        >
-            <path
-                className="uuid-9652422c-9824-4901-a3f6-837eb0813328"
-                d="m496.58,432.3c-7.44-13.21-219.4-145.81-455.36-17.82,0,0-3.98-2.73,6.18-10.69,9.96-7.86,49.58-32.18,124.43-55.66,74.74-26.21,149.17-29.56,177.26-130.4,58.7,18.55,86.06,48.64,84.7,63.21-1.68,16.98-18.34,26.73-29.98,31.66-11.01,4.72-17.09,7.86-15.51,11.43,2.73,5.87,59.02,9.43,70.23-41.83,4.51-46.86-64.15-80.82-108.39-90.57C356.01,4.82,176.23,0,176.23,0c-26.42,126,59.44,196.86,146.65,212.58,0,0-14.68,52.2-64.78,82.5C199.82,330.2,51.8,331.98.65,432.3c-2.52,5.03,1.57,15.62,24.74,7.34,284.39-108.07,443.93.73,461.54,4.19,9.01,1.78,16.67,1.05,9.54-11.53h.1ZM199.92,28.62s132.18,22.54,125.58,159.54c0,0-124.74-11.95-125.58-159.54Z"
-            />
-        </svg>
-    );
-};
-
-// --- Eric Finctions --- //
 
 const calculateWaitTime = (requestTime?: string, responseStartTime?: string): string => {
     if (!requestTime || !responseStartTime) return "-";
