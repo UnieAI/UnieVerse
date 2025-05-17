@@ -10,6 +10,8 @@ import { api } from "@/utils/api";
 import { ComposeActions } from "./actions";
 import { ShowProviderFormCompose } from "./generic/show";
 import AddAI from "./add-ai";
+import DomainsList from "./domain-list";
+// import ConnectAI from "./connect-ai";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -130,7 +132,7 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 									</Badge>
 								</div>
 								<div>
-									<AddAI />
+									{/* <AddAI />	 */}
 								</div>
 							</div>
 						</CardTitle>
@@ -194,23 +196,25 @@ export const ShowGeneralCompose = ({ composeId }: Props) => {
 									</div>
 
 								</div>
-								<div className="flex flex-col mt-10">
+								<DomainsList data={data} />
+								{/* <div className="flex flex-col mt-10">
 									<div className="flex gap-3">
 										<h1 className="opacity-50 mb-3 ">Domain</h1>
 									</div>
 									<div className="flex flex-col-reverse gap-3 ">
 										{data?.domains.map((item) => (
 											<Link
-												className="flex items-center gap-2 text-base font-medium hover:underline"
+												className="flex items-center gap-2 text-base font-medium hover:underline user-domain"
 												target="_blank"
 												href={`${item.https ? "https" : "http"}://${item.host}${item.path}`}
 											>
 												{item.host}
 												<ExternalLink className="size-4" />
 											</Link>
+											<ConnectAI data-url={`${item.https ? "https" : "http"}://${item.host}${item.path}`}/>
 										))}
 									</div>
-								</div>
+								</div> */}
 							</div>
 						</div>
 					)}

@@ -13,6 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         // Step 1: 嘗試登入
+        console.log(`[UnieInfra] UnieInfra API URL: ${UNIEINFRA_SYSTEM_API_URL}`);
         console.log(`[UnieInfra] Attempting login for user: ${username}`);
         const loginRes = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/user/login`, {
             method: "POST",

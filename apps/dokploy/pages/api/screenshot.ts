@@ -18,7 +18,7 @@ function getLocalChromeExecutablePath(): string {
 
 async function serveFallbackImage(res: NextApiResponse) {
   try {
-    const fallbackPath = path.join(process.cwd(), 'public', 'default-web-screen-shot.gif');
+    const fallbackPath = path.join(process.cwd(), 'public', 'greenscreen.png');
     const fallbackBuffer = await fs.readFile(fallbackPath);
     res.setHeader('Content-Type', 'image/png');
     res.status(200).end(fallbackBuffer);
