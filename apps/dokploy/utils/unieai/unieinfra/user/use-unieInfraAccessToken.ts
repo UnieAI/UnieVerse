@@ -24,17 +24,21 @@ export const useUnieInfraAccessToken = () => {
     const LinkUnieInfra = async (user: any) => {
         if (isLoading) return;
 
+        console.log(`try fetch LinkUnieInfra...`);
         setIsLoading(true);
         if (user) {
             console.log(`user: `, user);
 
             const unieInfraToken: string = await LoginUnieInfra(user.id, user.id);
             if (unieInfraToken === LoginUnieInfraError) {
+                console.log(`try fetch LinkUnieInfra failed`);
                 updateAccessToken(null);
             } else {
+                console.log(`try fetch LinkUnieInfra success`);
                 updateAccessToken(unieInfraToken);
             }
         } else {
+            console.log(`try fetch LinkUnieInfra failed: no user`);
             updateAccessToken(null);
         }
         setIsLoading(false);
