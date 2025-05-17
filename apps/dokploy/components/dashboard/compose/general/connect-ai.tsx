@@ -29,10 +29,17 @@ const schema = z.object({
 	model: z.string().min(1),
 });
 
-export default function ConnectAIForm({ appurl }: { appurl?: string }) {
+interface ConnectAIFormProps {
+	appurl?: string;
+}
+
+export default function ConnectAIForm({ appurl }: ConnectAIFormProps) {
+
+	const { accessToken } = useUnieInfra();
+
 	const [models, setModels] = useState<string[]>([]);
-  const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
-  const ai_appurl = `${formatted_appurl}/v1`;
+	const formatted_appurl = appurl!.endsWith('/') ? appurl!.slice(0, -1) : appurl;
+	const ai_appurl = `${formatted_appurl}/v1`;
 	const form = useForm({
 		resolver: zodResolver(schema),
 		defaultValues: {
@@ -43,7 +50,7 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 		},
 	});
 
-  useEffect(() => {
+	useEffect(() => {
 		if (ai_appurl) form.setValue("base_url", ai_appurl);
 	}, [ai_appurl, form]);
 
@@ -53,7 +60,9 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 		try {
 			const res = await fetch("/api/unieai/unieinfra/providers/openai/models", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+				},
 				body: JSON.stringify({ base_url, api_key }),
 			});
 			const json = await res.json();
@@ -66,16 +75,11 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 	};
 
 	const onSubmit = async (values: z.infer<typeof schema>) => {
-		const {
-			accessToken,
-			getTokens, postToken, putToken, isLoadingTokens,
-			groups, getGroups, isLoadingGroups,
-		} = useUnieInfra();
 		const res = await fetch("/api/unieai/unieinfra/channels/create", {
 			method: "POST",
 			headers: {
+				Authorization: `Bearer ${accessToken}`,
 				"Content-Type": "application/json",
-				"Authorization": `Bearer ${accessToken}`,
 			},
 			body: JSON.stringify({
 				name: values.name,

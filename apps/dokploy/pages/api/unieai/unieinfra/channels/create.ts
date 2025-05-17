@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		});
 
 		const regData = await regRes.json();
-		console.log(`[UnieInfra] Login response:`, regData);
+		console.log(`[UnieInfra] channel response:`, regData);
         return res.status(202).json({ message: "Channel registration in progress", detail: regData });
 		// if (loginRes.ok && regData.success && regData.access_token) {
 		// 	console.log(`[UnieInfra] Channel registration successful`);

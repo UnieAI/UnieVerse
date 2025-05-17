@@ -17,6 +17,7 @@ import { ProjectLayout } from "@/components/layouts/project-layout";
 import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import ConfettiExplosion from "react-confetti-explosion";
 import {
 	Card,
@@ -52,6 +53,9 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
 
+import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
+import { UNIEINFRA_SYSTEM_API_URL } from "@/utils/unieai/unieinfra/key";
+
 type TabState =
 	| "projects"
 	| "settings"
@@ -63,6 +67,9 @@ type TabState =
 const Service = (
 	props: InferGetServerSidePropsType<typeof getServerSideProps>,
 ) => {
+
+	const { accessToken } = useUnieInfra();
+
 	const [_toggleMonitoring, _setToggleMonitoring] = useState(false);
 	const { composeId, activeTab } = props;
 	const router = useRouter();
@@ -86,9 +93,9 @@ const Service = (
 	const { data: auth } = api.user.get.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
-	const [showFirework, setShowFirework] = useState(false)
-	const prevStatusRef = useRef<string | null>(null)
-	const hasMounted = useRef(false)
+	const [showFirework, setShowFirework] = useState(false);
+	const prevStatusRef = useRef<string | null>(null);
+	const hasMounted = useRef(false);
 
 
 	useEffect(() => {
@@ -110,8 +117,29 @@ const Service = (
 
 		// 更新前一個狀態
 		prevStatusRef.current = currentStatus
-	}, [data?.composeStatus])
+	}, [data?.composeStatus]);
 
+	const testApi = async (values: any) => {
+		const res = await fetch("/api/unieai/unieinfra/channels/create", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				name: values.name,
+				base_url: values.base_url,
+				key: values.api_key,
+				models: values.model,
+			}),
+		});
+		const json = await res.json();
+		if (res.ok) {
+			toast.success("LLM added. Access Token: " + json.accessToken);
+		} else {
+			toast.error("Failed: " + json.message);
+		}
+	};
 
 	return (
 		<div className="pb-10">
@@ -135,6 +163,23 @@ const Service = (
 				{/* {data?.project.name} |  */}
 			</Head>
 			<div className="w-full">
+
+				<Button type="button" variant="secondary" onClick={async () => {
+
+					console.log(`accessToken: `, accessToken);
+
+					const values = {
+						name: "TEST",
+						base_url: UNIEINFRA_SYSTEM_API_URL,
+						api_key: accessToken,
+						model: "aqua-mini",
+					};
+
+					await testApi(values);
+				}}>
+					TEST BTN
+				</Button>
+
 				<div className="w-full flex items-center justify-center">
 					{showFirework && (
 						<ConfettiExplosion
