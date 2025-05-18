@@ -56,12 +56,34 @@ export function hasSearchParams(searchParams: ReadonlyURLSearchParams): boolean 
     const api = getApiFromUrl(searchParams);
     const token = getTokenFromUrl(searchParams);
 
-    const hasBasicParams = !!model && !!tab && !!token;
-    const hasSearchParams =
-        hasBasicParams &&
-        (tab !== AI_PLAYGROUND_TAB_VALUE.TEST_API || !!api);
+    // Log missing parameters explicitly by checking for empty strings
+    if (model === "") {
+        console.warn("Missing required URL parameter: model");
+    } else {
+        console.log(`Model: ${model}`);
+    }
 
-    return hasSearchParams;
+    if (tab === "") {
+        console.warn("Missing required URL parameter: tab");
+    } else {
+        console.log(`Tab: ${tab}`);
+    }
+
+    if (api === "") {
+        console.warn("Missing required URL parameter: api");
+    } else {
+        console.log(`API: ${api}`);
+    }
+
+    if (token === "") {
+        console.warn("Missing required URL parameter: token");
+    } else {
+        console.log(`Token (sanitized): ${token}`);
+    }
+
+    const status = model !== "" && tab !== "" && api !== "" && token !== "";
+
+    return status;
 }
 
 export function getModelFromUrl(searchParams: ReadonlyURLSearchParams): string {

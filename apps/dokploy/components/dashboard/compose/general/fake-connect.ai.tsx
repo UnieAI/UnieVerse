@@ -23,7 +23,7 @@ import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvide
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BotMessageSquare } from "lucide-react";
 
-import { AI_PLAYGROUND_TAB_VALUE } from "@/utils/unieai/unieinfra/key";
+import { AI_PLAYGROUND_TAB_VALUE, UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
 import { AI_PLAYGROUND_SEARCH_PARAMS } from "../../settings/ai-playground";
 
 const schema = z.object({
@@ -137,7 +137,7 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                 toast.error("Failed: " + json1.message);
             }
         } catch (err: any) {
-             setOpen(true)
+            setOpen(true)
             setIsConnect(2)
             toast.error("Model fetch failed: " + err.message);
         }
@@ -179,8 +179,9 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     </DialogHeader>
                     <div className="h-10"></div>
                     <div className="w-full  flex items-center justify-center">
-                        <a href={`/dashboard/settings/ai-playground?${AI_PLAYGROUND_SEARCH_PARAMS.model}=${thisModel}&${AI_PLAYGROUND_SEARCH_PARAMS.tab}=${AI_PLAYGROUND_TAB_VALUE.UNIEINFRA}&${AI_PLAYGROUND_SEARCH_PARAMS.token}=BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8`}>
-                        <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
+
+                        <a href={`/dashboard/settings/ai-playground?${AI_PLAYGROUND_SEARCH_PARAMS.model}=${thisModel}&${AI_PLAYGROUND_SEARCH_PARAMS.tab}=${AI_PLAYGROUND_TAB_VALUE.UNIEINFRA}&${AI_PLAYGROUND_SEARCH_PARAMS.token}=BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8&${AI_PLAYGROUND_SEARCH_PARAMS.api}=${UNIEINFRA_OPENAI_API_URL}`}>
+                            <Button className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
                         </a>
                     </div>
                 </DialogContent>
