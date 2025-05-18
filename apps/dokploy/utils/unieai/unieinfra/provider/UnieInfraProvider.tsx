@@ -35,6 +35,13 @@ export const UnieInfraProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const { tokens, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: isLoadingTokens } = useUnieInfraTokens();
     const { groups, getGroups, isLoading: isLoadingGroups } = useUnieInfraGroups();
 
+    useEffect(() => {
+        if (accessToken) {
+            getTokens(accessToken);
+            getGroups(accessToken);
+        }
+    }, [accessToken]);
+
     return (
         <UnieInfraContext.Provider value={{
             accessToken, isConnecting, LinkUnieInfra,

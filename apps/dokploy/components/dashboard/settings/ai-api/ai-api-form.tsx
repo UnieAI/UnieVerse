@@ -28,7 +28,7 @@ import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unie
 export const AiApiForm = () => {
 
 	const { data: aiThirdPartyConfigs, refetch: refetchAiThirdParty, isLoading: isLoadingAiThirdParty } = api.aiThirdParty.getAll.useQuery();
-	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
+	const { mutateAsync, isLoading: isRemoving } = api.aiThirdParty.delete.useMutation();
 
 	// tokens 可以 list 出現有的 unieinfra tokens
 	const {
@@ -282,7 +282,7 @@ export const AiApiForm = () => {
 																	type="destructive"
 																	onClick={async () => {
 																		await mutateAsync({
-																			aiId: config.apiId,
+																			apiId: config.apiId,
 																		})
 																			.then(() => {
 																				toast.success("AI deleted successfully");
