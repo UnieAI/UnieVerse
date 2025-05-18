@@ -857,7 +857,7 @@ const SideBar = ({
                                     value={_str}
                                     disabled={(_str === API_TYPES.AI)} // 暫不開放
                                 >
-                                    {(_str === API_TYPES.AI) ? "AI Settings (coming soon...)" : (_str === API_TYPES.UNIEINFRA) ? "UnieInfra Token" : (_str === API_TYPES.Other) && "Other API"}
+                                    {(_str === API_TYPES.AI) ? "AI Settings (coming soon...)" : (_str === API_TYPES.UNIEINFRA) ? "UnieInfra API" : (_str === API_TYPES.Other) && "Other API"}
                                 </option>
                             ))}
                         </select>
@@ -867,7 +867,6 @@ const SideBar = ({
                     <div className="space-y-2">
                         {(currentApiType === API_TYPES.AI) ? (
                             <>
-
                             </>
                         ) : (currentApiType === API_TYPES.UNIEINFRA) ? (
                             <>
@@ -878,7 +877,7 @@ const SideBar = ({
                                     value={apiToken}
                                     onChange={(e) => setApiToken(e.target.value)}
                                 >
-                                    <option value="" disabled>Select UnieInfra api token</option>
+                                    <option value="" disabled>Select UnieInfra API Token</option>
                                     {tokens.map((token: any) => (
                                         <option
                                             key={token.id}
