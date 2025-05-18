@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
-import { PLAYGROUND_TAB_VALUE, PLAYGROUND_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment,PLAYGROUND_TAB_VALUE, PLAYGROUND_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 import { api } from "@/utils/api";
@@ -140,7 +140,7 @@ export const AiPlaygroundSidebar = ({
                         </select>
                     </div>
 
-                    {(process.env.NODE_ENV === "development") && (
+                    {isDevelopment && (
                         <div className="text-xs border p-4 rounded-lg flex flex-col gap-2 break-words whitespace-pre-wrap">
                             <div>Current api log: </div>
 

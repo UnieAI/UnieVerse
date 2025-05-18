@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 
+import { isDevelopment } from "@/utils/unieai/unieinfra/key";
+
 export interface UnieInfraTokenPayload {
     accessed_time?: number,
     created_time?: number,
@@ -26,7 +28,7 @@ export const Error: string = "failed";
 
 export const ListUnieInfraTokens = async (accessToken: string) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to get tokens: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/token/list", {
             method: "POST",
@@ -37,6 +39,7 @@ export const ListUnieInfraTokens = async (accessToken: string) => {
         });
 
         const data = await res.json();
+        if (isDevelopment) console.log(`ListUnieInfraTokens: `, data);
 
         if (!res.ok) {
             return [];
@@ -51,7 +54,7 @@ export const ListUnieInfraTokens = async (accessToken: string) => {
 
 export const PostUnieInfraToken = async (accessToken: string, payload: UnieInfraTokenPayload) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to post token: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/token/post", {
             method: "POST",
@@ -64,8 +67,7 @@ export const PostUnieInfraToken = async (accessToken: string, payload: UnieInfra
         });
 
         const data = await res.json();
-
-        console.log(`data: `, data);
+        if (isDevelopment) console.log(`PostUnieInfraToken: `, data);
 
         if (!res.ok) {
             toast.error(Error);
@@ -82,7 +84,7 @@ export const PostUnieInfraToken = async (accessToken: string, payload: UnieInfra
 
 export const PutUnieInfraToken = async (accessToken: string, payload: UnieInfraTokenPayload) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to put token: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/token/put", {
             method: "POST",
@@ -95,8 +97,7 @@ export const PutUnieInfraToken = async (accessToken: string, payload: UnieInfraT
         });
 
         const data = await res.json();
-
-        console.log(`data: `, data);
+        if (isDevelopment) console.log(`PutUnieInfraToken: `, data);
 
         if (!res.ok) {
             toast.error(Error);
@@ -113,7 +114,7 @@ export const PutUnieInfraToken = async (accessToken: string, payload: UnieInfraT
 
 export const PutUnieInfraTokenStatus = async (accessToken: string, payload: UnieInfraTokenStatusPayload) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to put token status: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/token/status", {
             method: "POST",
@@ -126,8 +127,7 @@ export const PutUnieInfraTokenStatus = async (accessToken: string, payload: Unie
         });
 
         const data = await res.json();
-
-        console.log(`data: `, data);
+        if (isDevelopment) console.log(`PutUnieInfraTokenStatus: `, data);
 
         if (!res.ok) {
             toast.error(Error);
@@ -144,7 +144,7 @@ export const PutUnieInfraTokenStatus = async (accessToken: string, payload: Unie
 
 export const DeleteUnieInfraToken = async (accessToken: string, id: number) => {
     try {
-        console.log(`try to get tokens: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to delete token: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/token/delete", {
             method: "POST",
@@ -152,13 +152,12 @@ export const DeleteUnieInfraToken = async (accessToken: string, id: number) => {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({id}),
+            body: JSON.stringify({ id }),
 
         });
 
         const data = await res.json();
-
-        console.log(`data: `, data);
+        if (isDevelopment) console.log(`DeleteUnieInfraToken: `, data);
 
         if (!res.ok) {
             toast.error(Error);

@@ -8,9 +8,8 @@ import { toast } from 'sonner'
 import { PanelRight, Send, CircleStop } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { PLAYGROUND_TAB_VALUE } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, PLAYGROUND_TAB_VALUE, UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
 
-import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 import { Message, ModelParams, _defaultModelParams } from ".";
@@ -19,8 +18,6 @@ import { AiPlaygroundSidebar } from "./ai-playground-sidebar";
 import { AiPlaygroundMessageRender } from "./ai-playground-message-render";
 
 export const AiPlaygroundForm = () => {
-
-    const isDevelopment: boolean = (process.env.NODE_ENV === "development");
 
     const isMobile: boolean = useIsMobile();
 

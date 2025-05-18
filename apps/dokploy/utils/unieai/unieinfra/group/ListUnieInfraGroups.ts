@@ -1,8 +1,10 @@
 import { toast } from "sonner";
 
+import { isDevelopment } from "@/utils/unieai/unieinfra/key";
+
 export const ListUnieInfraGroups = async (accessToken: string) => {
     try {
-        console.log(`try to get groups: \r\naccessToken:${accessToken}`);
+        if (isDevelopment) console.log(`try to get groups: \r\naccessToken:\r\nBearer ${accessToken}`);
 
         const res = await fetch("/api/unieai/unieinfra/group/user_group_map", {
             method: "POST",
@@ -13,6 +15,7 @@ export const ListUnieInfraGroups = async (accessToken: string) => {
         });
 
         const data = await res.json();
+        if (isDevelopment) console.log(`ListUnieInfraGroups: `, data);
 
         if (!res.ok) {
             return [];

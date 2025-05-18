@@ -1,4 +1,6 @@
 
+export const isDevelopment: boolean = (process.env.NODE_ENV === "development");
+
 // the key to get UnieInfra access_token value from localStorage 
 export const ACCESS_TOKEN_KEY = "UnieInfraAccessToken";
 
@@ -22,7 +24,7 @@ export const AI_MODEL_SOURCE_VALUE = {
     OTHER_API: "By other api",
 }
 export const AI_MODEL_SOURCE_KEYS: string[] =
-    (process.env.NODE_ENV === "development")
+    (isDevelopment)
         ? [AI_MODEL_SOURCE_VALUE.UNIEINFRA, AI_MODEL_SOURCE_VALUE.THIRD_PARTY, AI_MODEL_SOURCE_VALUE.OTHER_API]
         : [AI_MODEL_SOURCE_VALUE.UNIEINFRA, AI_MODEL_SOURCE_VALUE.THIRD_PARTY];
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { isDevelopment } from "@/utils/unieai/unieinfra/key";
 import {
     ListUnieInfraTokens,
     PostUnieInfraToken,
@@ -23,7 +24,7 @@ export const useUnieInfraTokens = () => {
 
         setIsGetting(true);
         const _tokens = await ListUnieInfraTokens(accessToken);
-        console.log(`_tokens: `, _tokens);
+        if (isDevelopment) console.log(`_tokens: `, _tokens);
         setTokens(_tokens);
         setIsGetting(false);
     };
