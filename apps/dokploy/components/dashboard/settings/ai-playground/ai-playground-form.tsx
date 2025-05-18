@@ -516,12 +516,12 @@ export const AiPlaygroundForm = () => {
             else if (currentApiType === PLAYGROUND_TAB_VALUE.UNIEINFRA) {
                 setApiUrl(UNIEINFRA_OPENAI_API_URL);
                 if (accessToken !== null) await getTokens(accessToken); // 重新嘗試取得 tokens
-                if (tokens.length === 0) {
+                if (tokens.length > 0) {
+                    setApiToken(`sk-${tokens[0]?.key!}`);
+                } else {
                     setApiToken("");
                     setModels([]);
                     toast.warning("No UnieInfra token exist, please create UnieInfra token first.")
-                } else {
-                    setApiToken(`sk-${tokens[0]?.key!}`);
                 }
             } else if (currentApiType === PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
                 if (Array.isArray(aiThirdPartyConfigs) && aiThirdPartyConfigs.length > 0) {
