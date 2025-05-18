@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react'
+import { api } from "@/utils/api";
 import { AutoResizeTextarea } from "@/components/ui/autoResizeTextareaProps";
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
@@ -27,8 +28,10 @@ export const AiPlaygroundForm = () => {
 
     const {
         accessToken,
-        getTokens,
+        tokens, getTokens,
     } = useUnieInfra();
+
+    const { data: aiThirdPartyConfigs, refetch: refetchAiThirdParty, isLoading: isLoadingAiThirdParty } = api.aiThirdParty.getAll.useQuery();
 
     const [apiUrl, setApiUrl] = useState<string>("");
     const [apiToken, setApiToken] = useState<string>("");
@@ -121,15 +124,16 @@ export const AiPlaygroundForm = () => {
     };
 
     const handleRefreshModels = async () => {
+
         if (!apiUrl || !apiToken) {
             toast.error("Please enter both API URL and Token.");
-            resetModels();
+            setModels([]);
             return;
         }
 
         if (isLoading || isReplying) {
             toast.error(`please wait...`);
-            resetModels();
+            setModels([]);
             return;
         }
 
@@ -143,17 +147,15 @@ export const AiPlaygroundForm = () => {
             });
 
             if (!response.ok) {
-                resetModels();
                 throw new Error(`API call failed with status ${response.status}`);
             }
 
             const data = await response.json();
             const modelIds: string[] = data.data.map((m: any) => m.id); // 提取 id
             setModels(modelIds);
-            if (modelIds.length === 0) resetModels();
             toast.success("Models fetched successfully!");
         } catch (err: any) {
-            resetModels();
+            setModels([]);
             toast.error("Failed to fetch models: " + err.message);
         } finally {
             setIsLoading(false);
@@ -392,20 +394,47 @@ export const AiPlaygroundForm = () => {
         toast.dismiss(toastId);
     };
 
-    const abortControllers = () => {
+    function abortControllers() {
         abortControllersRef.current.forEach((controller) => {
             controller.abort();
         });
         abortControllersRef.current = [];
     };
 
-    const handleStopReply = () => {
+    function handleStopReply() {
         abortControllers();
         setIsReplying(false);
         setIsLoading(false);
     };
 
-    const handleResetChatRoom = (resetModelParams: boolean) => {
+    function resetThreads() {
+        setThreadModels(() => {
+            let newModelParams: string[] = [];
+
+            // 補足長度
+            while (newModelParams.length < parallelCount) {
+                newModelParams.push("");
+            }
+
+            return newModelParams;
+        });
+
+        setThreadModelParams(() => {
+            let newModelParams: ModelParams[] = [];
+
+            // 補足長度
+            while (newModelParams.length < parallelCount) {
+                newModelParams.push(_defaultModelParams);
+            }
+
+            return newModelParams;
+        });
+
+        setDefaultModel("");
+        setDefaultModelParams(_defaultModelParams);
+    }
+
+    function handleResetChatRoom(resetModelParams: boolean) {
         abortControllers();
         setParallelMessages([]);
         setMessage('');
@@ -460,30 +489,7 @@ export const AiPlaygroundForm = () => {
                 return updated;
             });
         } else {
-            setThreadModels(() => {
-                let newModelParams: string[] = [];
-
-                // 補足長度
-                while (newModelParams.length < parallelCount) {
-                    newModelParams.push("");
-                }
-
-                return newModelParams;
-            });
-
-            setThreadModelParams(() => {
-                let newModelParams: ModelParams[] = [];
-
-                // 補足長度
-                while (newModelParams.length < parallelCount) {
-                    newModelParams.push(_defaultModelParams);
-                }
-
-                return newModelParams;
-            });
-
-            setDefaultModel("");
-            setDefaultModelParams(_defaultModelParams);
+            resetThreads();
         }
     };
 
@@ -509,7 +515,25 @@ export const AiPlaygroundForm = () => {
             }
             else if (currentApiType === PLAYGROUND_TAB_VALUE.UNIEINFRA) {
                 setApiUrl(UNIEINFRA_OPENAI_API_URL);
-                if (accessToken !== null) await getTokens(accessToken);
+                if (accessToken !== null) await getTokens(accessToken); // 重新嘗試取得 tokens
+                if (tokens.length === 0) {
+                    setApiToken("");
+                    setModels([]);
+                    toast.warning("No UnieInfra token exist, please create UnieInfra token first.")
+                } else {
+                    setApiToken(`sk-${tokens[0]?.key!}`);
+                }
+            } else if (currentApiType === PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
+                if (Array.isArray(aiThirdPartyConfigs) && aiThirdPartyConfigs.length > 0) {
+                    const config = aiThirdPartyConfigs[0]!;
+                    setApiUrl(config.apiUrl ?? "");
+                    setApiToken(config.apiKey ?? "");
+                } else {
+                    setApiUrl("");
+                    setApiToken("");
+                    toast.warning("No Third-Party token exist, please create Third-Party token first.");
+                }
+
             } else if (currentApiType === PLAYGROUND_TAB_VALUE.TEST_API) {
                 setApiUrl("");
                 setApiToken("");
@@ -521,29 +545,17 @@ export const AiPlaygroundForm = () => {
 
     useEffect(() => {
         const fetchModels = async () => {
-            if (apiUrl && apiToken) {
-                if (!isLoading && !isReplying) {
-                    await handleRefreshModels();
-                }
-            }
+            if (apiUrl && apiToken)
+                await handleRefreshModels();
+            else
+                setModels([]);
         }
         if (isOpenOptions) fetchModels();
     }, [isOpenOptions, apiUrl, apiToken]);
 
-    const resetModels = () => {
-        setModels([]);
-        setThreadModels(() => {
-            let newModelParams: string[] = [];
-
-            // 補足長度
-            while (newModelParams.length < parallelCount) {
-                newModelParams.push("");
-            }
-
-            return newModelParams;
-        });
-        setDefaultModel("");
-    }
+    useEffect(() => {
+        resetThreads();
+    }, [models])
 
     return (
         <>
