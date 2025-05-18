@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
-import ConnectAI from './connect-ai' // adjust path as needed
+import ConnectAI from './fake-connect.ai' // adjust path as needed
 
 const DomainsList = ({ data }) => {
   return (
@@ -21,7 +21,7 @@ const DomainsList = ({ data }) => {
                 {item.host}
                 <ExternalLink className="size-4" />
               </Link>
-              <ConnectAI appurl={url} />
+              <ConnectAI appurl={url} data={data}/>
             </div>
           )
         })}
