@@ -140,12 +140,17 @@ export const AiPlaygroundSidebar = ({
                         </select>
                     </div>
 
-                    <div>
-                        {`${apiUrl}`}
+                    <div className="text-xs border p-4 rounded-lg flex flex-col gap-2 break-words whitespace-pre-wrap">
+                        <div>Current api log: </div>
+
+                        <div>
+                            {`${apiUrl}`}
+                        </div>
+                        <div>
+                            {`${apiToken}`}
+                        </div>
                     </div>
-                    <div>
-                        {`${apiToken}`}
-                    </div>
+
 
                     {/* LLM api settings */}
                     <div className="space-y-2">

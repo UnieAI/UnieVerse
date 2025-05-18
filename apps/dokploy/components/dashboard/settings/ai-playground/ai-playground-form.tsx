@@ -119,8 +119,8 @@ export const AiPlaygroundForm = () => {
 
         if (tempParallelCount > maxCluster)
             toast.warning(`You set ${tempParallelCount} parallel instances, but your browser's actual concurrency limit appears to be around ${maxCluster}.`);
-        else
-            toast.info(`Your browser handled ${maxCluster} concurrent requests. This likely reflects its actual concurrency limit.`);
+        else 
+            toast.info(`Your browser handled ≥ ${maxCluster} concurrent requests. This likely reflects its actual concurrency limit.`);
     };
 
     const handleRefreshModels = async () => {
