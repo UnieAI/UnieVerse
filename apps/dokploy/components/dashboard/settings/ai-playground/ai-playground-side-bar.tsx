@@ -93,7 +93,7 @@ export const AiPlaygroundSideBar = ({
     defaultModelParams,
     setDefaultModelParams,
 
-}: SideBarProps) => {
+}: AiPlaygroundSideBarProps) => {
 
     const {
         tokens,
