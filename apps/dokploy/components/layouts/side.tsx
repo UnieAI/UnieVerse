@@ -270,7 +270,7 @@ function useMenu(): Menu {
 			{
 				title: "AI Playground",
 				icon: BotMessageSquare,
-				url: "/dashboard/settings/playground",
+				url: "/dashboard/settings/ai-playground",
 				isSingle: true,
 				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 			},
