@@ -45,16 +45,17 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                 messages.map((message: any, index: any) => (
                     <motion.div
                         key={index}
-                        className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`fmt-5 mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                     >
-                        {message.role === 'assistant' && (
+                        {/* {message.role === 'assistant' && (
                             <div className="border rounded-full h-8 w-8 flex items-center justify-center">
                                 <UnieAISVG className='text-blue-500 h-6 w-6' />
                             </div>
-                        )}
+                        )} */}
+
                         <div
                             className={`px-4 py-2 max-w-[80%] ${(message.role === 'user') && "bg-zinc-200 dark:bg-zinc-600"}`}
                             style={{
