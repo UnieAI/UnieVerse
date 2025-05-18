@@ -1,4 +1,4 @@
-import { AiForm } from "@/components/dashboard/settings/ai/ai-form";
+import { AiApiForm } from "@/components/dashboard/settings/ai-api/ai-api-form";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { appRouter } from "@/server/api/root";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
@@ -11,7 +11,7 @@ import superjson from "superjson";
 const Page = () => {
 	return (
 		<div className="flex flex-col gap-4 w-full">
-			<AiForm />
+			<AiApiForm />
 		</div>
 	);
 };

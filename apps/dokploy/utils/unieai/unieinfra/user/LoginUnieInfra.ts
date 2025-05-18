@@ -1,10 +1,12 @@
 import { toast } from "sonner";
 
+import { isDevelopment } from "@/utils/unieai/unieinfra/key";
+
 export const LoginUnieInfraError: string = "Login UnieInfra failed";
 
 export const LoginUnieInfra = async (username: string, password: string): Promise<string> => {
     try {
-        console.log(`try to login uniefra: \r\nuser:${username}\r\npassword:${password}`);
+        if (isDevelopment) console.log(`try to login uniefra: \r\nuser:\r\n${username}\r\npassword:\r\n${password}`);
 
         const res = await fetch("/api/unieai/unieinfra/user/login", {
             method: "POST",
@@ -15,6 +17,7 @@ export const LoginUnieInfra = async (username: string, password: string): Promis
         });
 
         const data = await res.json();
+        if (isDevelopment) console.log(`LoginUnieInfra: `, data);
 
         if (!res.ok || !data.accessToken) {
             toast.warning("Unable to connect to UnieInfra. Please try again later.");

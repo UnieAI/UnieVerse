@@ -1,6 +1,7 @@
 import { createTRPCRouter } from "../api/trpc";
 import { adminRouter } from "./routers/admin";
 import { aiRouter } from "./routers/ai";
+import { aiThirdPartyRouter } from "./routers/ai-third-party";
 import { applicationRouter } from "./routers/application";
 import { backupRouter } from "./routers/backup";
 import { bitbucketRouter } from "./routers/bitbucket";
@@ -78,6 +79,7 @@ export const appRouter = createTRPCRouter({
 	stripe: stripeRouter,
 	swarm: swarmRouter,
 	ai: aiRouter,
+	aiThirdParty: aiThirdPartyRouter,
 	organization: organizationRouter,
 	schedule: scheduleRouter,
 });

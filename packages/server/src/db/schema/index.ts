@@ -30,5 +30,6 @@ export * from "./server";
 export * from "./utils";
 export * from "./preview-deployments";
 export * from "./ai";
+export * from "./ai-third-party";
 export * from "./account";
 export * from "./schedule";

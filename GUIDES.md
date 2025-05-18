@@ -48,26 +48,79 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io
 4. Run the installer and follow the prompts
 5. Start Docker Desktop from the Start menu
 
-安裝 docker
+---
+
+## Eric Windows 本地部署指南
+
+### 1. 安裝 docker desktop 到 D槽
+
+下載網址：
+[docker desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+
+ - 將下載好的 Docker Desktop Installer.exe 放到 D:\Docker
+
+ - 開啟 PowerShell 
+執行指令：
+```bash
+D:
+```
+```bash
+cd .\Docker\
+```
+```bash
+Start-Process "D:\Docker\Docker Desktop Installer.exe" -ArgumentList "install", "-accept-license", "--installation-dir=D:\Docker\Docker", "--wsl-default-data-root=D:\Docker\wsl", "--windows-containers-default-data-root=D:\Docker" -Wait
+```
+
+跑好後開啟 docker desktop 完成後續安裝
+
+### 2. 安裝依賴
+
+啟動 docker 後執行：
+
+```bash
+docker run --name dokploy-redis -p 6379:6379 -d redis
+```
+
+```bash
+docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=dokploy -e POSTGRES_DB=dokploy -p 5432:5432 -d postgres
+```
+
+### 3. nvm for Windows
 
 ```bash
 nvm use 20.9.0
 ```
+
+### 4. 設定專案
+
 ```bash
 pnpm i
 ```
-```bash
-docker run --name dokploy-redis -p 6379:6379 -d redis
-```
-```bash
-docker run --name dokploy-postgres -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=dokploy -e POSTGRES_DB=dokploy -p 5432:5432 -d postgres
-```
-```bash
-pnpm dokploy:setup
-```
+
 ```bash
 pnpm run server:script
 ```
+
+```bash
+pnpm dokploy:setup
+```
+
+### 5. 啟動專案
+
 ```bash
 pnpm dokploy:dev
+```
+
+### 6. 附錄
+
+#### 新增資料庫欄位
+
+新增後 到 ..\UnieVerse\apps\dokploy> 執行
+
+```bash
+pnpm run migration:generate
+```
+
+```bash
+pnpm run setup
 ```

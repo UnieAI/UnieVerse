@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LoginUnieInfra, LoginUnieInfraError } from "./LoginUnieInfra";
-import { ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, ACCESS_TOKEN_KEY } from "@/utils/unieai/unieinfra/key";
 
 export const useUnieInfraAccessToken = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -24,17 +24,21 @@ export const useUnieInfraAccessToken = () => {
     const LinkUnieInfra = async (user: any) => {
         if (isLoading) return;
 
+        console.log(`try fetch LinkUnieInfra...`);
         setIsLoading(true);
         if (user) {
-            console.log(`user: `, user);
+            if (isDevelopment) console.log(`user: `, user);
 
             const unieInfraToken: string = await LoginUnieInfra(user.id, user.id);
             if (unieInfraToken === LoginUnieInfraError) {
+                console.error(`try fetch LinkUnieInfra failed`);
                 updateAccessToken(null);
             } else {
+                console.log(`try fetch LinkUnieInfra success`);
                 updateAccessToken(unieInfraToken);
             }
         } else {
+            console.error(`try fetch LinkUnieInfra failed: no user`);
             updateAccessToken(null);
         }
         setIsLoading(false);
