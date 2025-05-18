@@ -134,7 +134,7 @@ export const AiPlaygroundSidebar = ({
                                     value={_str}
                                     disabled={(_str === PLAYGROUND_TAB_VALUE.AI)} // 暫不開放
                                 >
-                                    {(_str === PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra Token" : (_str === PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
+                                    {(_str === PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra API" : (_str === PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
                                 </option>
                             ))}
                         </select>
@@ -142,7 +142,7 @@ export const AiPlaygroundSidebar = ({
 
                     {isDevelopment && (
                         <div className="text-xs border p-4 rounded-lg flex flex-col gap-2 break-words whitespace-pre-wrap">
-                            <div>Current api log: </div>
+                            <div>current api log: </div>
 
                             <div>
                                 {`${apiUrl}`}
@@ -168,7 +168,7 @@ export const AiPlaygroundSidebar = ({
                                     onChange={(e) => setApiToken(e.target.value)}
                                     disabled={isLoading || isReplying}
                                 >
-                                    <option value="" disabled>Select UnieInfra api token</option>
+                                    <option value="" disabled>Select UnieInfra API Token</option>
                                     {tokens.map((token: any) => (
                                         <option
                                             key={token.id}

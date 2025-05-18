@@ -13,10 +13,10 @@ export const AiPlaygroundMessageTimingDetail = ({ message }: AiPlaygroundMessage
     return (
         <div className="mt-1 text-xs opacity-60 text-left">
             <button
-                className="hover:underline"
+                className="hover:underline text-xs text-neutral-500"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                {isOpen ? "hide detail ▲" : "detail ▼"}
+                {isOpen ? "Hide detail ▲" : "Detail ▼"}
             </button>
 
             {isOpen && (
@@ -29,8 +29,8 @@ export const AiPlaygroundMessageTimingDetail = ({ message }: AiPlaygroundMessage
                     )} */}
                     {message.requestTime && message.responseStartTime && (
                         <div>
-                            <span>TTFT: </span>
-                            <span className="text-sm">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
+                            <span className="text-xs text-neutral-500">TTFT: </span>
+                            <span className="text-xs text-neutral-500">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
                         </div>
                     )}
                     {/* {message.responseStartTime && (
@@ -47,18 +47,18 @@ export const AiPlaygroundMessageTimingDetail = ({ message }: AiPlaygroundMessage
                     )} */}
                     {message.durationMs != null && (
                         <div>
-                            <span>Total time: </span>
-                            <span className="text-sm">{(message.durationMs / 1000).toFixed(2)}</span>
-                            <span className="ml-1">sec</span>
+                            <span className="text-xs text-neutral-500">Total time: </span>
+                            <span className="text-xs text-neutral-500">{(message.durationMs / 1000).toFixed(2)}</span>
+                            <span className="text-xs ml-1 text-neutral-500">sec</span>
                         </div>
                     )}
                     {message.durationMs != null && (
                         <div>
-                            <span>TPS: </span>
-                            <span className="text-sm">
+                            <span className="text-xs text-neutral-500">TPS: </span>
+                            <span className="text-xs text-neutral-500">
                                 {calculateCharsPerSecond(message.content, message.durationMs)}
                             </span>
-                            <span className="ml-1">chars/sec</span>
+                            <span className="ml-1 text-xs text-neutral-500">chars/sec</span>
                         </div>
                     )}
                     {message.state != null && (
