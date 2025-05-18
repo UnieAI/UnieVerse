@@ -119,7 +119,7 @@ export const AiPlaygroundForm = () => {
 
         if (tempParallelCount > maxCluster)
             toast.warning(`You set ${tempParallelCount} parallel instances, but your browser's actual concurrency limit appears to be around ${maxCluster}.`);
-        else 
+        else
             toast.info(`Your browser handled ≥ ${maxCluster} concurrent requests. This likely reflects its actual concurrency limit.`);
     };
 
@@ -137,6 +137,8 @@ export const AiPlaygroundForm = () => {
             return;
         }
 
+        console.log(`Try fetch models:\r\nurl:\r\n${apiUrl}/models\r\nauthorization:\r\nBearer ${apiToken}`);
+
         try {
             setIsLoading(true);
             const response = await fetch(`${apiUrl}/models`, {
@@ -146,12 +148,14 @@ export const AiPlaygroundForm = () => {
                 },
             });
 
+            const result = await response.json();
+            console.log(`fetch models result:`, result);
+
             if (!response.ok) {
-                throw new Error(`API call failed with status ${response.status}`);
+                throw new Error(`fetch models failed with status ${response.status}`);
             }
 
-            const data = await response.json();
-            const modelIds: string[] = data.data.map((m: any) => m.id); // 提取 id
+            const modelIds: string[] = result.data.map((m: any) => m.id); // 提取 id
             setModels(modelIds);
             toast.success("Models fetched successfully!");
         } catch (err: any) {
@@ -510,6 +514,10 @@ export const AiPlaygroundForm = () => {
 
     useEffect(() => {
         const fetchUnieInfra = async () => {
+
+            setApiUrl("");
+            setApiToken("");
+
             if (currentApiType === PLAYGROUND_TAB_VALUE.AI) {
 
             }
@@ -519,24 +527,20 @@ export const AiPlaygroundForm = () => {
                 if (tokens.length > 0) {
                     setApiToken(`sk-${tokens[0]?.key!}`);
                 } else {
-                    setApiToken("");
                     setModels([]);
                     toast.warning("No UnieInfra token exist, please create UnieInfra token first.")
                 }
             } else if (currentApiType === PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
                 if (Array.isArray(aiThirdPartyConfigs) && aiThirdPartyConfigs.length > 0) {
                     const config = aiThirdPartyConfigs[0]!;
-                    setApiUrl(config.apiUrl ?? "");
-                    setApiToken(config.apiKey ?? "");
+                    setApiUrl(config.apiUrl);
+                    setApiToken(config.apiKey);
                 } else {
-                    setApiUrl("");
-                    setApiToken("");
                     toast.warning("No Third-Party token exist, please create Third-Party token first.");
                 }
 
             } else if (currentApiType === PLAYGROUND_TAB_VALUE.TEST_API) {
-                setApiUrl("");
-                setApiToken("");
+
             }
         };
 
