@@ -873,6 +873,7 @@ const SideBar = ({
                             <>
                                 <label className="text-sm">UnieInfra API Token</label>
                                 <select
+                                    id="api-key"
                                     className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                                     value={apiToken}
                                     onChange={(e) => setApiToken(e.target.value)}
