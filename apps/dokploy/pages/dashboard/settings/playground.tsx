@@ -1324,16 +1324,16 @@ const MessageRender = ({ thread, messages, threadModels, setThreadModels, model,
                 messages.map((message: any, index: any) => (
                     <motion.div
                         key={index}
-                        className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`mt-5 mr-10 flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
                     >
-                        {message.role === 'assistant' && (
+                        {/* {message.role === 'assistant' && (
                             <div className="border rounded-full h-8 w-8 flex items-center justify-center">
                                 <UnieAISVG className='text-blue-500 h-6 w-6' />
                             </div>
-                        )}
+                        )} */}
                         <div
                             className={`px-4 py-2 max-w-[80%] ${(message.role === 'user') && "bg-zinc-200 dark:bg-zinc-600"}`}
                             style={{
@@ -1375,10 +1375,10 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
     return (
         <div className="mt-1 text-xs opacity-60 text-left">
             <button
-                className="hover:underline"
+                className="hover:underline text-xs text-neutral-500"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                {isOpen ? "hide detail ▲" : "detail ▼"}
+                {isOpen ? "Hide detail ▲" : "Detail ▼"}
             </button>
 
             {isOpen && (
@@ -1391,8 +1391,8 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
                     )} */}
                     {message.requestTime && message.responseStartTime && (
                         <div>
-                            <span>TTFT: </span>
-                            <span className="text-sm">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
+                            <span className="text-xs text-neutral-500">TTFT: </span>
+                            <span className="text-xs text-neutral-500">{calculateWaitTime(message.requestTime, message.responseStartTime)}</span>
                         </div>
                     )}
                     {/* {message.responseStartTime && (
@@ -1409,18 +1409,18 @@ const MessageTimingDetail = ({ message }: MessageTimingDetailProps) => {
                     )} */}
                     {message.durationMs != null && (
                         <div>
-                            <span>Total time: </span>
-                            <span className="text-sm">{(message.durationMs / 1000).toFixed(2)}</span>
-                            <span className="ml-1">sec</span>
+                            <span className="text-xs text-neutral-500">Total time: </span>
+                            <span className="text-xs text-neutral-500">{(message.durationMs / 1000).toFixed(2)}</span>
+                            <span className="text-xs ml-1 text-neutral-500">sec</span>
                         </div>
                     )}
                     {message.durationMs != null && (
                         <div>
-                            <span>TPS: </span>
-                            <span className="text-sm">
+                            <span className="text-xs text-neutral-500">TPS: </span>
+                            <span className="text-xs text-neutral-500">
                                 {calculateCharsPerSecond(message.content, message.durationMs)}
                             </span>
-                            <span className="ml-1">chars/sec</span>
+                            <span className="ml-1 text-xs text-neutral-500">chars/sec</span>
                         </div>
                     )}
                     {message.state != null && (
