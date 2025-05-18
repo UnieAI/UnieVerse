@@ -20,7 +20,9 @@ import { AiPlaygroundMessageRender } from "./ai-playground-message-render";
 
 export const AiPlaygroundForm = () => {
 
-    const isMobile = useIsMobile();
+    const isDevelopment: boolean = (process.env.NODE_ENV === "development");
+
+    const isMobile: boolean = useIsMobile();
 
     const [isOpenOptions, setIsOpenOptions] = useState<boolean>(true);
 
@@ -137,7 +139,7 @@ export const AiPlaygroundForm = () => {
             return;
         }
 
-        console.log(`Try fetch models:\r\nurl:\r\n${apiUrl}/models\r\nauthorization:\r\nBearer ${apiToken}`);
+        if (isDevelopment) console.log(`Try fetch models:\r\nurl:\r\n${apiUrl}/models\r\nauthorization:\r\nBearer ${apiToken}`);
 
         try {
             setIsLoading(true);
@@ -149,7 +151,7 @@ export const AiPlaygroundForm = () => {
             });
 
             const result = await response.json();
-            console.log(`fetch models result:`, result);
+            if (isDevelopment) console.log(`fetch models result:`, result);
 
             if (!response.ok) {
                 throw new Error(`fetch models failed with status ${response.status}`);
