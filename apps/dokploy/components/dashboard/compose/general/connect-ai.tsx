@@ -24,8 +24,8 @@ import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvide
 
 const schema = z.object({
 	name: z.string().min(1),
+	api_key: z.string().optional(),
 	base_url: z.string().url(),
-	api_key: z.string().min(1),
 	model: z.string().min(1),
 });
 
@@ -34,21 +34,21 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 	const { accessToken } = useUnieInfra();
 
 	const [models, setModels] = useState<string[]>([]);
-	const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
-	const ai_appurl = `${formatted_appurl}/v1`;
+	// const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
+	// const ai_appurl = `${formatted_appurl}/v1`;
 	const form = useForm({
 		resolver: zodResolver(schema),
 		defaultValues: {
 			name: "",
-			base_url: ai_appurl || "",
+			base_url: appurl || "",
 			api_key: "",
 			model: "",
 		},
 	});
 
 	useEffect(() => {
-		if (ai_appurl) form.setValue("base_url", ai_appurl);
-	}, [ai_appurl, form]);
+		if (appurl) form.setValue("base_url", appurl);
+	}, [appurl, form]);
 
 
 	const fetchModels = async () => {

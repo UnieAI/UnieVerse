@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	}
 
 	try {
-		const response = await fetch(`${base_url}/models`, {
+		const response = await fetch(`${base_url}/v1/models`, {
 			headers: {
 				Authorization: `Bearer ${api_key}`,
 			},
