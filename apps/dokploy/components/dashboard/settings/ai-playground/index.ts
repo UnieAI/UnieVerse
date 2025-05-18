@@ -37,3 +37,13 @@ export const _defaultModelParams: ModelParams = {
     context_length_exceeded_behavior: "none",
     echo: false
 };
+
+// --- Search Params --- //
+
+// ai-playground search params
+export const AI_PLAYGROUND_SEARCH_PARAMS = {
+    model: "model",
+    tab: "tab",
+    api: "api",
+    token: "token"
+}

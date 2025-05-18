@@ -43,3 +43,43 @@ export function calculateCharsPerSecond(content: string, durationMs?: number): s
     const cps = (content.length / durationMs) * 1000; // 轉換成每秒
     return `${cps.toFixed(1)}`;
 };
+
+// ---  Search Params  --- //
+
+import { ReadonlyURLSearchParams } from "next/navigation";
+import { AI_PLAYGROUND_SEARCH_PARAMS } from ".";
+import { AI_PLAYGROUND_TAB_VALUE } from "@/utils/unieai/unieinfra/key";
+
+export function hasSearchParams(searchParams: ReadonlyURLSearchParams): boolean {
+    const model = getModelFromUrl(searchParams);
+    const tab = getTabFromUrl(searchParams);
+    const api = getApiFromUrl(searchParams);
+    const token = getTokenFromUrl(searchParams);
+
+    const hasBasicParams = !!model && !!tab && !!token;
+    const hasSearchParams =
+        hasBasicParams &&
+        (tab !== AI_PLAYGROUND_TAB_VALUE.TEST_API || !!api);
+
+    return hasSearchParams;
+}
+
+export function getModelFromUrl(searchParams: ReadonlyURLSearchParams): string {
+    const model = searchParams.get(AI_PLAYGROUND_SEARCH_PARAMS.model) || "";
+    return model;
+}
+
+export function getTabFromUrl(searchParams: ReadonlyURLSearchParams): string {
+    const tab = searchParams.get(AI_PLAYGROUND_SEARCH_PARAMS.tab) || "";
+    return tab;
+}
+
+export function getApiFromUrl(searchParams: ReadonlyURLSearchParams): string {
+    const api = searchParams.get(AI_PLAYGROUND_SEARCH_PARAMS.api) || "";
+    return api;
+}
+
+export function getTokenFromUrl(searchParams: ReadonlyURLSearchParams): string {
+    const token = searchParams.get(AI_PLAYGROUND_SEARCH_PARAMS.token) || "";
+    return token.startsWith("sk-") ? token.replace(/^sk-/, "") : token;
+}

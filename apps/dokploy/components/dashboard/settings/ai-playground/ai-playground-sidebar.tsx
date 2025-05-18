@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
-import { isDevelopment,PLAYGROUND_TAB_VALUE, PLAYGROUND_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment,AI_PLAYGROUND_TAB_VALUE, AI_PLAYGROUND_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 import { api } from "@/utils/api";
@@ -19,7 +19,7 @@ import { calculateCharsPerSecond } from "./functions";
 
 interface AiPlaygroundSidebarProps {
     currentApiType: string;
-    setCurrentApiType: React.Dispatch<React.SetStateAction<string>>;
+    handleApiOptionsTabChange: (apiTab: string) => Promise<void>;
     isOpenOptions: boolean;
     isMobile: boolean;
     isLoading: boolean;
@@ -58,7 +58,7 @@ interface AiPlaygroundSidebarProps {
 
 export const AiPlaygroundSidebar = ({
     currentApiType,
-    setCurrentApiType,
+    handleApiOptionsTabChange,
     isOpenOptions,
     isMobile,
     isLoading,
@@ -124,17 +124,17 @@ export const AiPlaygroundSidebar = ({
                         <select
                             className="w-1/2 p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                             value={currentApiType}
-                            onChange={(e) => setCurrentApiType(e.target.value)}
+                            onChange={(e) => handleApiOptionsTabChange(e.target.value)}
                             disabled={isLoading || isReplying}
                         >
                             <option value="" disabled>Select api type</option>
-                            {PLAYGROUND_TAB_KEYS.map((_str: string, _idx) => (
+                            {AI_PLAYGROUND_TAB_KEYS.map((_str: string, _idx) => (
                                 <option
                                     key={_idx}
                                     value={_str}
-                                    disabled={(_str === PLAYGROUND_TAB_VALUE.AI)} // 暫不開放
+                                    disabled={(_str === AI_PLAYGROUND_TAB_VALUE.AI)} // 暫不開放
                                 >
-                                    {(_str === PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra API" : (_str === PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
+                                    {(_str === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra API" : (_str === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === AI_PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
                                 </option>
                             ))}
                         </select>
@@ -155,11 +155,11 @@ export const AiPlaygroundSidebar = ({
 
                     {/* LLM api settings */}
                     <div className="space-y-2">
-                        {(currentApiType === PLAYGROUND_TAB_VALUE.AI) ? (
+                        {(currentApiType === AI_PLAYGROUND_TAB_VALUE.AI) ? (
                             <>
 
                             </>
-                        ) : (currentApiType === PLAYGROUND_TAB_VALUE.UNIEINFRA) ? (
+                        ) : (currentApiType === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA) ? (
                             <>
                                 <label className="text-sm">UnieInfra API Token</label>
                                 <select
@@ -179,7 +179,7 @@ export const AiPlaygroundSidebar = ({
                                     ))}
                                 </select>
                             </>
-                        ) : (currentApiType === PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? (
+                        ) : (currentApiType === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? (
                             <>
                                 <label className="text-sm">Third-Party Token</label>
                                 <select
@@ -210,7 +210,7 @@ export const AiPlaygroundSidebar = ({
                                     ))}
                                 </select>
                             </>
-                        ) : (currentApiType === PLAYGROUND_TAB_VALUE.TEST_API) && (
+                        ) : (currentApiType === AI_PLAYGROUND_TAB_VALUE.TEST_API) && (
                             <>
                                 <label className="text-sm flex flex-col">
                                     <span>API URL</span>

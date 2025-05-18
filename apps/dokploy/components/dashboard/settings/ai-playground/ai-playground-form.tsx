@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useSearchParams } from "next/navigation"
 import { api } from "@/utils/api";
 import { AutoResizeTextarea } from "@/components/ui/autoResizeTextareaProps";
 import { Button } from "@/components/ui/button"
@@ -8,22 +9,40 @@ import { toast } from 'sonner'
 import { PanelRight, Send, CircleStop } from 'lucide-react'
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { isDevelopment, PLAYGROUND_TAB_VALUE, UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key";
+import {
+    isDevelopment,
+    AI_PLAYGROUND_TAB_VALUE,
+    UNIEINFRA_OPENAI_API_URL
+} from "@/utils/unieai/unieinfra/key";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
-import { Message, ModelParams, _defaultModelParams } from ".";
+import {
+    Message,
+    ModelParams,
+    _defaultModelParams
+} from ".";
+
+import {
+    hasSearchParams,
+    getModelFromUrl,
+    getTabFromUrl,
+    getApiFromUrl,
+    getTokenFromUrl
+} from "./functions";
 
 import { AiPlaygroundSidebar } from "./ai-playground-sidebar";
 import { AiPlaygroundMessageRender } from "./ai-playground-message-render";
 
 export const AiPlaygroundForm = () => {
 
+    const sp = useSearchParams();
+
     const isMobile: boolean = useIsMobile();
 
     const [isOpenOptions, setIsOpenOptions] = useState<boolean>(true);
 
-    const [currentApiType, setCurrentApiType] = useState<string>(PLAYGROUND_TAB_VALUE.UNIEINFRA);
+    const [currentApiType, setCurrentApiType] = useState<string>("");
 
     const {
         accessToken,
@@ -122,28 +141,30 @@ export const AiPlaygroundForm = () => {
             toast.info(`Your browser handled ≥ ${maxCluster} concurrent requests. This likely reflects its actual concurrency limit.`);
     };
 
-    const handleRefreshModels = async () => {
+    const handleRefreshModels = async (_url?: string, _token?: string) => {
 
-        if (!apiUrl || !apiToken) {
+        if ((!apiUrl && !_url) || (!apiToken && !_token)) {
             toast.error("Please enter both API URL and Token.");
             setModels([]);
             return;
         }
 
         if (isLoading || isReplying) {
-            toast.error(`please wait...`);
-            setModels([]);
             return;
         }
 
-        if (isDevelopment) console.log(`Try fetch models:\r\nurl:\r\n${apiUrl}/models\r\nauthorization:\r\nBearer ${apiToken}`);
+        // 優先採用傳入值
+        const currentUrl: string = _url ?? apiUrl;
+        const currentToken: string = _token ?? apiToken;
+
+        if (isDevelopment) console.warn(`Try fetch models:\r\nurl:\r\n${currentUrl}\r\nauthorization:\r\nBearer ${currentToken}`);
 
         try {
             setIsLoading(true);
-            const response = await fetch(`${apiUrl}/models`, {
+            const response = await fetch(`${currentUrl}/models`, {
                 headers: {
                     'Content-Type': 'application/json',
-                    "Authorization": `Bearer ${apiToken}`,
+                    "Authorization": `Bearer ${currentToken}`,
                 },
             });
 
@@ -155,6 +176,7 @@ export const AiPlaygroundForm = () => {
             }
 
             const modelIds: string[] = result.data.map((m: any) => m.id); // 提取 id
+            if (modelIds.length === 0) console.warn(`該 api 取得的模型列表為空`);
             setModels(modelIds);
             toast.success("Models fetched successfully!");
         } catch (err: any) {
@@ -433,7 +455,14 @@ export const AiPlaygroundForm = () => {
             return newModelParams;
         });
 
-        setDefaultModel("");
+        if (!models.includes(defaultModel) && defaultModel !== "") {
+            if (isDevelopment) {
+                console.warn(`清除預設模型`);
+                console.warn(`models: `, models);
+                console.warn(`defaultModel: `, defaultModel);
+            }
+            setDefaultModel("");
+        }
         setDefaultModelParams(_defaultModelParams);
     }
 
@@ -496,6 +525,43 @@ export const AiPlaygroundForm = () => {
         }
     };
 
+    const handleApiOptionsTabChange = async (apiTab: string) => {
+
+        if (apiTab === currentApiType) return;
+
+        setCurrentApiType(apiTab);
+        if (isDevelopment) console.warn(`Tab 切換為: ${apiTab}\r\n自動載入初始值...`);
+
+        setApiUrl("");
+        setApiToken("");
+        setModels([]);
+        handleResetChatRoom(true);
+
+        if (apiTab === AI_PLAYGROUND_TAB_VALUE.AI) {
+
+        }
+        else if (apiTab === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA) {
+            setApiUrl(UNIEINFRA_OPENAI_API_URL);
+            if (accessToken !== null) await getTokens(accessToken); // 重新嘗試取得 tokens
+            if (tokens.length > 0) {
+                setApiToken(`sk-${tokens[0]?.key!}`);
+            } else {
+                toast.warning("No UnieInfra token exist, please create UnieInfra token first.")
+            }
+        } else if (apiTab === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
+            if (Array.isArray(aiThirdPartyConfigs) && aiThirdPartyConfigs.length > 0) {
+                const config = aiThirdPartyConfigs[0]!;
+                setApiUrl(config.apiUrl);
+                setApiToken(config.apiKey);
+            } else {
+                toast.warning("No Third-Party token exist, please create Third-Party token first.");
+            }
+
+        } else if (apiTab === AI_PLAYGROUND_TAB_VALUE.TEST_API) {
+
+        }
+    };
+
     useEffect(() => {
         let currentIndex = isMobile ? 2 : 3;
         setMaxSelectIndex(currentIndex);
@@ -506,61 +572,56 @@ export const AiPlaygroundForm = () => {
     }, [isMobile]);
 
     useEffect(() => {
-        if (!isLoading && !isReplying) testConcurrency();
-
         handleResetChatRoom(false);
     }, [parallelCount]);
 
     useEffect(() => {
-        const fetchUnieInfra = async () => {
+        const fetchParams = async () => {
+            if (isDevelopment) console.warn(`載入SearchParams...`);
 
-            setApiUrl("");
-            setApiToken("");
+            const _model = getModelFromUrl(sp);
+            const _tab = getTabFromUrl(sp);
+            const _api = getApiFromUrl(sp);
+            const _token = `sk-${getTokenFromUrl(sp)}`;
 
-            if (currentApiType === PLAYGROUND_TAB_VALUE.AI) {
+            if (isDevelopment) console.warn(`SearchParams:\r\nmodel: ${_model}\r\ntab: ${_tab}\r\napi: ${_api}\r\ntoken: ${_token}`);
 
-            }
-            else if (currentApiType === PLAYGROUND_TAB_VALUE.UNIEINFRA) {
-                setApiUrl(UNIEINFRA_OPENAI_API_URL);
-                if (accessToken !== null) await getTokens(accessToken); // 重新嘗試取得 tokens
-                if (tokens.length > 0) {
-                    setApiToken(`sk-${tokens[0]?.key!}`);
-                } else {
-                    setModels([]);
-                    toast.warning("No UnieInfra token exist, please create UnieInfra token first.")
-                }
-            } else if (currentApiType === PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
-                if (Array.isArray(aiThirdPartyConfigs) && aiThirdPartyConfigs.length > 0) {
-                    const config = aiThirdPartyConfigs[0]!;
-                    setApiUrl(config.apiUrl);
-                    setApiToken(config.apiKey);
-                } else {
-                    toast.warning("No Third-Party token exist, please create Third-Party token first.");
-                }
+            setDefaultModel(_model);
+            setCurrentApiType(_tab);
+            setApiUrl(_api);
+            setApiToken(_token);
 
-            } else if (currentApiType === PLAYGROUND_TAB_VALUE.TEST_API) {
+            if (isDevelopment) console.warn(`更新模型列表...`);
+            await handleRefreshModels(_api, _token);
+        }
 
-            }
-        };
+        if (!isLoading && !isReplying) testConcurrency();
 
-        fetchUnieInfra();
-    }, [currentApiType]);
+        if (hasSearchParams(sp)) fetchParams();
+        else handleApiOptionsTabChange(AI_PLAYGROUND_TAB_VALUE.UNIEINFRA);
+    }, []);
 
     useEffect(() => {
         const fetchModels = async () => {
             if (apiUrl && apiToken) {
-                if (currentApiType !== PLAYGROUND_TAB_VALUE.TEST_API) await handleRefreshModels();
+                if (currentApiType === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA || currentApiType === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) {
+                    if (isDevelopment) console.warn(`觸發自動更新模型列表...`);
+                    await handleRefreshModels();
+                }
             }
             else {
-                setModels([]);
+                if (models.length > 0) {
+                    if (isDevelopment) console.warn(`觸發自動清除模型列表...`);
+                    setModels([]);
+                }
             }
         }
-        if (isOpenOptions) fetchModels();
+        if (isOpenOptions && !isLoading && !isReplying) fetchModels();
     }, [isOpenOptions, apiUrl, apiToken]);
 
     useEffect(() => {
         resetThreads();
-    }, [models])
+    }, [models]);
 
     return (
         <>
@@ -621,7 +682,7 @@ export const AiPlaygroundForm = () => {
             {/* options */}
             <AiPlaygroundSidebar
                 currentApiType={currentApiType}
-                setCurrentApiType={setCurrentApiType}
+                handleApiOptionsTabChange={handleApiOptionsTabChange}
                 isOpenOptions={isOpenOptions}
                 isMobile={isMobile}
                 isLoading={isLoading}
