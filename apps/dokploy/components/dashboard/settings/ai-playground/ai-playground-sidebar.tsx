@@ -17,7 +17,7 @@ import { api } from "@/utils/api";
 import { Message, ModelParams, _defaultModelParams } from ".";
 import { calculateCharsPerSecond } from "./functions";
 
-interface AiPlaygroundSideBarProps {
+interface AiPlaygroundSidebarProps {
     currentApiType: string;
     setCurrentApiType: React.Dispatch<React.SetStateAction<string>>;
     isOpenOptions: boolean;
@@ -56,7 +56,7 @@ interface AiPlaygroundSideBarProps {
 
 }
 
-export const AiPlaygroundSideBar = ({
+export const AiPlaygroundSidebar = ({
     currentApiType,
     setCurrentApiType,
     isOpenOptions,
@@ -93,7 +93,7 @@ export const AiPlaygroundSideBar = ({
     defaultModelParams,
     setDefaultModelParams,
 
-}: AiPlaygroundSideBarProps) => {
+}: AiPlaygroundSidebarProps) => {
 
     const {
         tokens,

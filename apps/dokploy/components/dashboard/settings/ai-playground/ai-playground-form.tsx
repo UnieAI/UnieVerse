@@ -14,7 +14,7 @@ import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvide
 
 import { Message, ModelParams, _defaultModelParams } from ".";
 
-import { AiPlaygroundSideBar } from "./ai-playground-side-bar";
+import { AiPlaygroundSidebar } from "./ai-playground-sidebar";
 import { AiPlaygroundMessageRender } from "./ai-playground-message-render";
 
 export const AiPlaygroundForm = () => {
@@ -602,7 +602,7 @@ export const AiPlaygroundForm = () => {
             </div>
 
             {/* options */}
-            <AiPlaygroundSideBar
+            <AiPlaygroundSidebar
                 currentApiType={currentApiType}
                 setCurrentApiType={setCurrentApiType}
                 isOpenOptions={isOpenOptions}
