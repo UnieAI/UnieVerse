@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  dokploy:
+    image: unieverse:latest
+    build:
+        context: .
+        dockerfile: Dockerfile
+        target: dokploy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 1
+        order: stop-first
+    networks:
+      - dokploy-network
+    ports:
+      - target: 3000
+        published: 3000
+        mode: host
+    environment:
+      - ADVERTISE_ADDR=${ADVERTISE_ADDR}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - NEXT_PUBLIC_UNIEINFRA_API_URL=http://172.31.10.93:35080
+    dns:
+      - ${ADVERTISE_ADDR}
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: /etc/dokploy
+        target: /etc/dokploy
+      - type: bind
+        source: /root/.docker
+        target: /root/.docker
+
+  dokploy-traefik:
+    image: traefik:v3.1.2
+    command:
+      - "--configFile=/etc/dokploy/traefik/traefik.yml"
+    restart: always
+    networks:
+      - dokploy-network
+    dns:
+      - ${ADVERTISE_ADDR}
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: /etc/dokploy
+        target: /etc/dokploy
+        read_only: true
+
+  postgres:
+    image: postgres:15
+    container_name: dokploy-postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: dokploy
+      POSTGRES_USER: dokploy
+      POSTGRES_PASSWORD: amukds4wi9001583845717ad2
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
+
+  redis:
+    image: redis:7
+    container_name: dokploy-redis
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - dokploy-network
+
+volumes:
+  pg_data:
+
+networks:
+  dokploy-network:
+    external: true

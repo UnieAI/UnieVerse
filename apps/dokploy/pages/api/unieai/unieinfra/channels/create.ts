@@ -20,17 +20,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				base_url,
 				models,
 				type: 1,
-				other: '',
-				proxy: '',
-				test_model: '',
-				model_mapping: '{}',
-				groups: ['default'],
-				plugin: {},
-				tag: '',
-				only_chat: false,
-				pre_cost: 1,
-				is_edit: false,
-				group: 'default',
 		}
 		console.log(`[UnieInfra][Channel] payload: ${JSON.stringify(payload)}`)
 		const regRes = await fetch(`${UNIEINFRA_SYSTEM_API_URL}/channel`, {

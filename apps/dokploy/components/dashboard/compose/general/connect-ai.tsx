@@ -30,9 +30,12 @@ const schema = z.object({
 });
 
 export default function ConnectAIForm({ appurl }: { appurl?: string }) {
+
+	const { accessToken } = useUnieInfra();
+
 	const [models, setModels] = useState<string[]>([]);
-  const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
-  const ai_appurl = `${formatted_appurl}/v1`;
+	const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
+	const ai_appurl = `${formatted_appurl}/v1`;
 	const form = useForm({
 		resolver: zodResolver(schema),
 		defaultValues: {
@@ -43,7 +46,7 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 		},
 	});
 
-  useEffect(() => {
+	useEffect(() => {
 		if (ai_appurl) form.setValue("base_url", ai_appurl);
 	}, [ai_appurl, form]);
 
@@ -66,11 +69,8 @@ export default function ConnectAIForm({ appurl }: { appurl?: string }) {
 	};
 
 	const onSubmit = async (values: z.infer<typeof schema>) => {
-		const {
-			accessToken,
-			getTokens, postToken, putToken, isLoadingTokens,
-			groups, getGroups, isLoadingGroups,
-		} = useUnieInfra();
+		console.log("Access token:", accessToken)
+
 		const res = await fetch("/api/unieai/unieinfra/channels/create", {
 			method: "POST",
 			headers: {
