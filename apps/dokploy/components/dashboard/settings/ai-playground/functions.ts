@@ -48,7 +48,6 @@ export function calculateCharsPerSecond(content: string, durationMs?: number): s
 
 import { ReadonlyURLSearchParams } from "next/navigation";
 import { AI_PLAYGROUND_SEARCH_PARAMS } from ".";
-import { AI_PLAYGROUND_TAB_VALUE } from "@/utils/unieai/unieinfra/key";
 
 export function hasSearchParams(searchParams: ReadonlyURLSearchParams): boolean {
     const model = getModelFromUrl(searchParams);
