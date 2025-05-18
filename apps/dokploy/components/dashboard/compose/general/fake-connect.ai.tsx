@@ -35,7 +35,8 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
 
     const { accessToken } = useUnieInfra();
 
-    const [models, setModels] = useState<string[]>([]);
+    // const [models, setModels] = useState<string[]>([]);
+    const [thisModel, setThisModel] = useState<string>();
     // const formatted_appurl = appurl.endsWith('/') ? appurl.slice(0, -1) : appurl;
     // const ai_appurl = `${formatted_appurl}/v1`;
     const form = useForm({
@@ -120,13 +121,14 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     name: data.composeId,
                     base_url: cleanedUrl,
                     key: api_key,
-                    models: model,
+                    models: model.join(','),
                 }),
             });
             const json1 = await res1.json();
             if (res.ok) {
                 setOpen(true)
                 setIsConnect(2)
+                setThisModel(model.join(','))
                 toast.success("LLM added. Access Token: " + json1.accessToken);
             } else {
                 setOpen(false)
@@ -134,7 +136,7 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
             }
         } catch (err: any) {
              setOpen(true)
-                setIsConnect(2)
+            setIsConnect(2)
             toast.error("Model fetch failed: " + err.message);
         }
         console.log(model, data.composeId, cleanedUrl)
@@ -175,9 +177,9 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     </DialogHeader>
                     <div className="h-10"></div>
                     <div className="w-full  flex items-center justify-center">
-                        {/* <a href={`/dashboard/settings/playground?api=unieinfea&tokensk-BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8`}> */}
+                        <a href={`/dashboard/settings/playground?name=${thisModel}&api=unieinfea&tokensk-BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8`}>
                         <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
-                        {/* </a> */}
+                        </a>
                     </div>
                 </DialogContent>
             </Dialog>
