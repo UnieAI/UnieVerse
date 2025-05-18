@@ -426,9 +426,7 @@ export const HandleAi = ({ aiId }: HandleAiProps) => {
 														<Input placeholder={"https://api.openai.com/v1"} {...field} />
 													</FormControl>
 													<FormDescription>
-														{apiUrl && !apiUrl.endsWith('/v1') ? (
-															<span className="text-red-500">API URL must end with <code>/v1</code></span>
-														) : "The base URL for your AI provider's API"}
+														The base URL for your AI provider's API
 													</FormDescription>
 													<FormMessage />
 												</FormItem>
@@ -468,9 +466,7 @@ export const HandleAi = ({ aiId }: HandleAiProps) => {
 												<Input placeholder={"https://api.openai.com/v1"} {...field} />
 											</FormControl>
 											<FormDescription>
-												{apiUrl && !apiUrl.endsWith('/v1') ? (
-													<span className="text-red-500">API URL must end with <code>/v1</code></span>
-												) : "The base URL for your AI provider's API"}
+												The base URL for your AI provider's API
 											</FormDescription>
 											<FormMessage />
 										</FormItem>

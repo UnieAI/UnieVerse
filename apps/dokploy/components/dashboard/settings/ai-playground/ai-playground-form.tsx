@@ -548,10 +548,12 @@ export const AiPlaygroundForm = () => {
 
     useEffect(() => {
         const fetchModels = async () => {
-            if (apiUrl && apiToken)
-                await handleRefreshModels();
-            else
+            if (apiUrl && apiToken) {
+                if (currentApiType !== PLAYGROUND_TAB_VALUE.TEST_API) await handleRefreshModels();
+            }
+            else {
                 setModels([]);
+            }
         }
         if (isOpenOptions) fetchModels();
     }, [isOpenOptions, apiUrl, apiToken]);
