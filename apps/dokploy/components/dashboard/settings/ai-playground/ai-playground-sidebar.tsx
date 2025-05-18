@@ -214,9 +214,6 @@ export const AiPlaygroundSidebar = ({
                             <>
                                 <label className="text-sm flex flex-col">
                                     <span>API URL</span>
-                                    {apiUrl && !apiUrl.endsWith('/v1') && (
-                                        <span className="text-red-500">API URL must end with <code>/v1</code></span>
-                                    )}
                                 </label>
 
                                 <input

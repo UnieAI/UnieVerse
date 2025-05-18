@@ -37,14 +37,14 @@ export const UnieInfraConnectionHintPoint = ({ showState }: UnieInfraConnectionH
                   isConnecting ? "bg-orange-500" : (accessToken !== null) ? "text-green-500" : "text-red-500"
                 )}
               >
-                {isConnecting ? "Connecting" : (accessToken !== null) ? "Connected" : "Unconnected"}
+                {isConnecting ? "Connecting" : (accessToken !== null) ? "Connected" : "Disconnected"}
               </span>
             )}
           </div>
         </TooltipTrigger>
         {!showState && (
           <TooltipContent>
-            <p>{isConnecting ? "Connecting with UnieInfra" : (accessToken !== null) ? "UnieInfra connected" : "UnieInfra unconnected"}</p>
+            <p>{isConnecting ? "Connecting with UnieInfra" : (accessToken !== null) ? "UnieInfra connected" : "UnieInfra disconnected"}</p>
           </TooltipContent>
         )}
       </Tooltip>

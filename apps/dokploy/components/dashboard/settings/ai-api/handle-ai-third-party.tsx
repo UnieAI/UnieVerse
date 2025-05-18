@@ -157,9 +157,7 @@ export const HandleAiThirdParty = ({ apiId }: Props) => {
 										<Input placeholder="https://api.openai.com/v1" {...field} />
 									</FormControl>
 									<FormDescription>
-										{apiUrl && !apiUrl.endsWith('/v1') ? (
-											<span className="text-red-500">API URL must end with <code>/v1</code></span>
-										) : "Base URL of the external AI API"}
+										Base URL of the external AI API
 									</FormDescription>
 									<FormMessage />
 								</FormItem>
