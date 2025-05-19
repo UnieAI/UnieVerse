@@ -52,6 +52,8 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
 
+import { ShowProviderFormCompose } from "@/components/dashboard/compose/general/generic/show"
+
 type TabState =
 	| "projects"
 	| "settings"
@@ -272,7 +274,7 @@ const Service = (
 											)}
 										>
 											<TabsTrigger value="general">General</TabsTrigger>
-											<TabsTrigger value="preview">Preview</TabsTrigger>
+											<TabsTrigger value="provider">Provider</TabsTrigger>
 											<TabsTrigger value="environment">Environment</TabsTrigger>
 											<TabsTrigger value="domains">Domains</TabsTrigger>
 											<TabsTrigger value="deployments">Deployments</TabsTrigger>
@@ -291,8 +293,9 @@ const Service = (
 											<ShowGeneralCompose composeId={composeId} />
 										</div>
 									</TabsContent>
-									<TabsContent value="preview">
+									<TabsContent value="provider">
 										<div className="flex flex-col gap-4 pt-2.5">
+											<ShowProviderFormCompose composeId={composeId} />
 										</div>
 									</TabsContent>
 									<TabsContent value="environment">

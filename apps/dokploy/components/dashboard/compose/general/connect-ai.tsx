@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BotMessageSquare } from "lucide-react";
+import { UNIEINFRA_OPENAI_API_URL } from "@/utils/unieai/unieinfra/key"
 
 
 const schema = z.object({
@@ -34,6 +35,9 @@ const schema = z.object({
 export default function ConnectAIForm({ appurl, data }: { appurl?: string, data: any }) {
 
     const { accessToken } = useUnieInfra();
+
+    const tab = "UnieInfra"
+    const token = "SZFVB4VR5YQSBTF_tPWF889IXVKQEYjjsLsiYy3m0vbm76iUWtCYacTWqKI"
 
     // const [models, setModels] = useState<string[]>([]);
     const [thisModel, setThisModel] = useState<string>();
@@ -177,7 +181,7 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     </DialogHeader>
                     <div className="h-10"></div>
                     <div className="w-full  flex items-center justify-center">
-                        <a href={`/dashboard/settings/ai-playground?model=${thisModel}&tab=UnieInfra&token=SZFVB4VR5YQSBTF_tPWF889IXVKQEYjjsLsiYy3m0vbm76iUWtCYacTWqKI&api=https://unieinfra2.uv-nico.test.unieai.com/v1`}>
+                        <a href={`/dashboard/settings/ai-playground?model=${thisModel}&tab=${tab}&token=${token}&api=${UNIEINFRA_OPENAI_API_URL}`}>
                             <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
                         </a>
                         {/* <a href={`/dashboard/settings/ai-playground?model=qwen_2.5_7b_vllm&tab=Test API&token=SZFVB4VR5YQSBTF_tPWF889IXVKQEYjjsLsiYy3m0vbm76iUWtCYacTWqKI&api=https://unieinfra2.uv-nico.test.unieai.com/`}>
