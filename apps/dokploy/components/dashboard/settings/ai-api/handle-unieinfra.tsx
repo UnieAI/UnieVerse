@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
-
+import { defaultTokenName } from "@/utils/unieai/unieinfra/key";
 import { toDatetimeLocalString } from "@/utils/time";
 import { UnieInfraTokenPayload, Success } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
@@ -44,7 +44,9 @@ const Schema = z.object({
 	expired_time: z.number(),
 	group: z.string(),
 	is_edit: z.boolean(),
-	name: z.string().min(1, { message: "Name is required" }),
+	name: z.string().min(1, { message: "Name is required" }).refine((val) => val !== defaultTokenName, {
+		message: `"${defaultTokenName}" is a reserved name`,
+	}),
 	remain_quota: z.number(),
 	unlimited_quota: z.boolean(),
 });

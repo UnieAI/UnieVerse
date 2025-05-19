@@ -26,7 +26,7 @@ export interface UnieInfraTokenStatusPayload {
 export const Success: string = "success";
 export const Error: string = "failed";
 
-export const ListUnieInfraTokens = async (accessToken: string) => {
+export const ListUnieInfraTokens = async (accessToken: string): Promise<UnieInfraTokenPayload[]> => {
     try {
         if (isDevelopment) console.log(`try to get tokens: \r\naccessToken:\r\nBearer ${accessToken}`);
 
