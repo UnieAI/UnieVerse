@@ -33,11 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		});
 
 		const regData = await regRes.json();
-		console.log(`[UnieInfra] Login response:`, regData);
+		console.log(`[UnieInfra] [Channel] response:`, regData);
         return res.status(202).json({ message: "Channel registration in progress", detail: regData });
 
 	} catch (error: any) {
-		console.error(`[UnieInfra] Unexpected error`, error.message);
+		console.error(`[UnieInfra] [Channel] Unexpected error`, error.message);
 		return res.status(500).json({ message: "UnieInfra Channel registration failed.", error: error.message });
 	}
 }
