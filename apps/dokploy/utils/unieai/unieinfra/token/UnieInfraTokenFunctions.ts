@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import { isDevelopment, UnieInfraDefaultTokenName } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME } from "@/utils/unieai/unieinfra/key";
 
 export interface UnieInfraTokenPayload {
     accessed_time?: number,
@@ -30,7 +30,7 @@ export const CreateDefaultToken = async (accessToken: string): Promise<string> =
     const payload: UnieInfraTokenPayload = {
         expired_time: -1,
         group: "",
-        name: UnieInfraDefaultTokenName,
+        name: AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME,
         remain_quota: 0,
         unlimited_quota: true,
     }
@@ -39,7 +39,7 @@ export const CreateDefaultToken = async (accessToken: string): Promise<string> =
         const _tokens = await ListUnieInfraTokens(accessToken);
 
         const matchedTokens: any[] = _tokens.filter(
-            (token: any) => token.name === UnieInfraDefaultTokenName
+            (token: any) => token.name === AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME
         );
 
         if (matchedTokens.length > 0) return matchedTokens[0].key;

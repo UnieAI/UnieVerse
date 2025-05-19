@@ -25,7 +25,7 @@ import { toDatetimeLocalString } from "@/utils/time";
 import {
 	AI_API_TAB_VALUE,
 	AI_API_TAB_KEYS,
-	UnieInfraDefaultTokenName
+	AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME
 } from "@/utils/unieai/unieinfra/key";
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
@@ -182,7 +182,7 @@ export const AiApiForm = () => {
 																<span className="text-sm font-medium">
 																	{token.name}
 																</span>
-																{(token.name !== UnieInfraDefaultTokenName) && (
+																{(token.name !== AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME) && (
 																	<>
 																		<CardDescription>
 																			{token.unlimited_quota ? `Unlimited` : `Used Quota: ${token.used_quota}/${token.remain_quota}`}
@@ -194,7 +194,7 @@ export const AiApiForm = () => {
 																)}
 															</div>
 															<div className="flex justify-between items-center">
-																{(token.name !== UnieInfraDefaultTokenName) && (
+																{(token.name !== AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME) && (
 																	<Switch
 																		className="mr-2"
 																		checked={token.status === 1}
@@ -213,7 +213,7 @@ export const AiApiForm = () => {
 																	/>
 																)}
 
-																{(token.name !== UnieInfraDefaultTokenName) && (
+																{(token.name !== AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME) && (
 																	<HandleUnieInfra tokenData={token} />
 																)}
 
@@ -235,7 +235,7 @@ export const AiApiForm = () => {
 																	<Copy className="size-4  text-primary group-hover:text-blue-500" />
 																</Button>
 
-																{(token.name !== UnieInfraDefaultTokenName) && (
+																{(token.name !== AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME) && (
 																	<DialogAction
 																		title="Delete AI"
 																		description="Are you sure you want to delete this AI?"
