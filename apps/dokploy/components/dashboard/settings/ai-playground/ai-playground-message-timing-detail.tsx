@@ -11,7 +11,7 @@ export const AiPlaygroundMessageTimingDetail = ({ message }: AiPlaygroundMessage
     const [isOpen, setIsOpen] = useState(true);
 
     return (
-        <div className="mt-1 text-xs opacity-60 text-left">
+        <div className=" text-xs opacity-60 text-left mt-5">
             <button
                 className="hover:underline text-xs text-neutral-500"
                 onClick={() => setIsOpen(!isOpen)}

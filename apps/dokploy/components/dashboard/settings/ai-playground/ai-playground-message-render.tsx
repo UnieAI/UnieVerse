@@ -10,6 +10,13 @@ import { AiPlaygroundMessageTimingDetail } from "./ai-playground-message-timing-
 
 import { copyImageLink, normalizeUrl } from "./functions";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
 interface AiPlaygroundMessageRenderProps {
     thread: number;
     messages: any;
@@ -45,7 +52,7 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                 messages.map((message: any, index: any) => (
                     <motion.div
                         key={index}
-                        className={`fmt-5 w-full flex mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`mt-5 w-full flex mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -59,7 +66,7 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                         <div
                             className={`px-4  py-2 max-w-[90%] ${(message.role === 'user') && "bg-zinc-200 mr-4 justify-end w-fit dark:bg-zinc-600"}`}
                             style={{
-                                borderRadius: '0.5rem',
+                                borderRadius: '0.9rem',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
                             }}
@@ -219,21 +226,26 @@ const TextComponent = ({ text }: { text: string }) => {
             //.filter(line => line.trim() !== '') // 過濾空行
             .join('\n')
     );
+    // const parsedText = parseMarkdown(
+    //     text.replace(/^\s*\n/, '') // 只移除開頭第一個空行（或多個連續空行）
+    // );
+
 
     // 用正則拆分出 think 區塊與普通文字
     const parts = parsedText.split(/(\[\[THINK_START\]\][\s\S]*?\[\[THINK_END\]\])/g);
 
     return (
-        <div>
+        <div className='flex flex-col items-start'>
             {parts.map((part, index) => {
                 if (part.startsWith('[[THINK_START]]')) {
-                    const content = part.replace('[[THINK_START]]', '').replace('[[THINK_END]]', '');
+                    const content = part.replace('[[THINK_START]]', '').replace('[[THINK_END]]', '').replace(/^\s*\n/, '');
                     return <ThinkBlock key={index} content={content} />;
                 } else {
                     return (
                         <div
+                            className=''
                             key={index}
-                            dangerouslySetInnerHTML={{ __html: part }}
+                            dangerouslySetInnerHTML={{ __html: part.replace(/^\s*\n/, '').replace('\n\n/g','\n') }}
                         />
                     );
                 }
@@ -244,21 +256,33 @@ const TextComponent = ({ text }: { text: string }) => {
 
 // 思考區塊元件
 const ThinkBlock = ({ content }: { content: string }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <div>
-            <button
+            {/* <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="text-sm opacity-40 hover:opacity-60"
             >
-                {isOpen ? 'close ▲' : 'think ▼'}
+                {isOpen ? 'Close Think ▲' : 'Think ▼'}
             </button>
             {isOpen && (
                 <div
+                    className='text-sm ml-1 pl-5 opacity-50 border-l-2'
                     dangerouslySetInnerHTML={{ __html: content }}
                 />
-            )}
+            )} */}
+            <Accordion type="single" collapsible >
+                <AccordionItem value="think" className='border-b-0'>
+                    <AccordionTrigger className='justify-start text-sm opacity-40 hover:opacity-60'>Thinking</AccordionTrigger>
+                    <AccordionContent>
+                        <div
+                            className='text-sm ml-1 pl-5 opacity-50 border-l-2'
+                            dangerouslySetInnerHTML={{ __html: content }}
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+                </Accordion>
         </div>
     );
 };
