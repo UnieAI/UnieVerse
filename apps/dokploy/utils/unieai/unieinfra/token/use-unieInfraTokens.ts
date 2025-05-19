@@ -20,6 +20,7 @@ export const useUnieInfraTokens = () => {
     const [isPuting, setIsPuting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [tokens, setTokens] = useState<UnieInfraTokenPayload[]>([]);
+    const [defaultToken, setDefaultToken] = useState<string | null>(null);
 
     const getTokens = async (accessToken: string) => {
         if (isGetting) return;
@@ -116,15 +117,22 @@ export const useUnieInfraTokens = () => {
             result = await CreateDefaultToken(accessToken);
         }
 
-        if (isDevelopment) {
-            if (result !== Error) console.warn(`UnieInfra default token:\r\nsk-${result}`);
-            else console.warn(`UnieInfra fetch default token Error`);
+        if (result !== Error) {
+            if (isDevelopment) console.log(`UnieInfra default token:\r\nsk-${result}`);
+            setDefaultToken(result);
         }
+        else {
+            if (isDevelopment) console.warn(`UnieInfra fetch default token Error`);
+            setDefaultToken(null);
+        }
+
         _tokens = await ListUnieInfraTokens(accessToken);
         setTokens(_tokens);
+
         setIsSettingDefault(false);
+
         return result;
     };
 
-    return { tokens, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: (isSettingDefault || isGetting || isPosting || isPuting || isDeleting) };
+    return { tokens, defaultToken, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: (isSettingDefault || isGetting || isPosting || isPuting || isDeleting) };
 };

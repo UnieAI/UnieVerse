@@ -12,10 +12,11 @@ import { useUnieInfraGroups } from '../group/use-unieInfraGroups';
 interface UnieInfraContextValue {
     // link
     accessToken: string | null;
-    isConnecting: boolean;
     LinkUnieInfra: (user: any) => Promise<void>;
+    isConnecting: boolean;
     // token
     tokens: UnieInfraTokenPayload[];
+    defaultToken: string | null;
     fetchDefaultToken: (accessToken: string, reCreateToken: boolean) => Promise<string>;
     getTokens: (accessToken: string) => Promise<void>;
     postToken: (accessToken: string, payload: UnieInfraTokenPayload) => Promise<string>;
@@ -34,31 +35,31 @@ const UnieInfraContext = createContext<UnieInfraContextValue | undefined>(undefi
 export const UnieInfraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     const { accessToken, LinkUnieInfra, isLoading: isConnecting } = useUnieInfraAccessToken();
-    const { tokens, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: isLoadingTokens } = useUnieInfraTokens();
+    const { tokens, defaultToken, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: isLoadingTokens } = useUnieInfraTokens();
     const { groups, getGroups, isLoading: isLoadingGroups } = useUnieInfraGroups();
 
+    // accessToken 更新時 自動更新 tokens, defaultToken, groups
     useEffect(() => {
         const fetchUnieInfraDefaultToken = async (accessToken: string) => {
             await fetchDefaultToken(accessToken, false); // 不強制重建新 default token
-        }
+        };
 
         if (accessToken) {
-            getTokens(accessToken);
-            getGroups(accessToken);
-
             // 確認是否包含 defaultTokenName
             const matchedToken = tokens.find(token =>
                 token.name && token.name.includes(defaultTokenName)
             );
 
             if (!matchedToken) fetchUnieInfraDefaultToken(accessToken);
+
+            getGroups(accessToken);
         }
     }, [accessToken]);
 
     return (
         <UnieInfraContext.Provider value={{
-            accessToken, isConnecting, LinkUnieInfra,
-            tokens, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoadingTokens,
+            accessToken, LinkUnieInfra, isConnecting,
+            tokens, defaultToken, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoadingTokens,
             groups, getGroups, isLoadingGroups
         }}>
             {children}
