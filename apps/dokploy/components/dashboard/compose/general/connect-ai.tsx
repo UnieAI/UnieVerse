@@ -71,31 +71,31 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
     // 	}
     // };
 
-    const onSubmit = async (values: z.infer<typeof schema>) => {
-        console.log("Access token:", accessToken)
+    // const onSubmit = async (values: z.infer<typeof schema>) => {
+    //     console.log("Access token:", accessToken)
 
 
 
-        const res = await fetch("/api/unieai/unieinfra/channels/create", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-                name: values.name,
-                base_url: values.base_url,
-                key: values.api_key,
-                models: values.model,
-            }),
-        });
-        const json = await res.json();
-        if (res.ok) {
-            toast.success("LLM added. Access Token: " + json.accessToken);
-        } else {
-            toast.error("Failed: " + json.message);
-        }
-    };
+    //     const res = await fetch("/api/unieai/unieinfra/channels/create", {
+    //         method: "POST",
+    //         headers: {
+    //             "Content-Type": "application/json",
+    //             "Authorization": `Bearer ${accessToken}`,
+    //         },
+    //         body: JSON.stringify({
+    //             name: values.name,
+    //             base_url: values.base_url,
+    //             key: values.api_key,
+    //             models: values.model,
+    //         }),
+    //     });
+    //     const json = await res.json();
+    //     if (res.ok) {
+    //         toast.success("LLM added. Access Token: " + json.accessToken);
+    //     } else {
+    //         toast.error("Failed: " + json.message);
+    //     }
+    // };
 
     const connectUnieInfra = async () => {
         let model;
@@ -177,9 +177,12 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     </DialogHeader>
                     <div className="h-10"></div>
                     <div className="w-full  flex items-center justify-center">
-                        <a href={`/dashboard/settings/playground?name=${thisModel}&api=unieinfea&token=BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8`}>
-                        <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
+                        <a href={`/dashboard/settings/ai-playground?model=${thisModel}&tab=UnieInfra&token=BKRK89BCFLAQPEY_lpG_i9wFcuvOZ6jjcqJ5pzqzHJZRB7pImJHfU6dM1u8`}>
+                            <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
                         </a>
+                        {/* <a href={`/dashboard/settings/ai-playground?model=aqua-mini-2503&tab=Test API&token=XnbHbzBOmPYGHgL_jLpgcJNSnog78lNayG2CVU5O0MDQ4iVZ_u4XLhva1Dc&api=https://api.exp.unieai.com/v1`}>
+                        <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
+                        </a>  */}
                     </div>
                 </DialogContent>
             </Dialog>

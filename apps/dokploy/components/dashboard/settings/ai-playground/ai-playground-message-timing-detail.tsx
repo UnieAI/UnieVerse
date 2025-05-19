@@ -61,18 +61,26 @@ export const AiPlaygroundMessageTimingDetail = ({ message }: AiPlaygroundMessage
                             <span className="ml-1 text-xs text-neutral-500">chars/sec</span>
                         </div>
                     )}
-                    {message.state != null && (
+                    {message.state === "error" || message.state === "abort" && (
+                        // <span
+                        //     className={`opacity-50 
+                        //     ${message.state === "complete"
+                        //             ? "text-green-500"
+                        //             : message.state === "streaming"
+                        //                 ? "text-yellow-500"
+                        //                 : message.state === "error"
+                        //                     ? "text-red-500"
+                        //                     : message.state === "abort"
+                        //                         ? "text-orange-500"
+                        //                         : ""}
+                        //     `}
+                        // >
+                        //     {message.state}
+                        // </span>
                         <span
                             className={`opacity-50 
-                            ${message.state === "complete"
-                                    ? "text-green-500"
-                                    : message.state === "streaming"
-                                        ? "text-yellow-500"
-                                        : message.state === "error"
-                                            ? "text-red-500"
-                                            : message.state === "abort"
-                                                ? "text-orange-500"
-                                                : ""}
+                            ${message.state === "error" ? "text-red-500"
+                                : message.state === "abort"? "text-orange-500" : ""}
                             `}
                         >
                             {message.state}

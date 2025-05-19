@@ -23,7 +23,7 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
     const isMobile = useIsMobile();
     return (
         <>
-            <div className="flex flex-row items-start justify-between gap-6 px-4 text-sm text-zinc-500 font-semibold mb-1">
+            <div className="flex  flex-row items-start justify-between gap-6 px-4 text-sm text-zinc-500 font-semibold mb-1">
                 <div>#{thread}</div>
                 <select
                     value={threadModels[thread - 1] || ""}
@@ -40,12 +40,12 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                     ))}
                 </select>
             </div>
-
+            <div className='w-full flex flex-col gap-5 mt-5'>
             {
                 messages.map((message: any, index: any) => (
                     <motion.div
                         key={index}
-                        className={`fmt-5 mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`fmt-5 w-full flex mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -57,7 +57,7 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                         )} */}
 
                         <div
-                            className={`px-4 py-2 max-w-[80%] ${(message.role === 'user') && "bg-zinc-200 dark:bg-zinc-600"}`}
+                            className={`px-4  py-2 max-w-[90%] ${(message.role === 'user') && "bg-zinc-200 mr-4 justify-end w-fit dark:bg-zinc-600"}`}
                             style={{
                                 borderRadius: '0.5rem',
                                 whiteSpace: 'pre-wrap',
@@ -83,6 +83,7 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                     </motion.div>
                 ))
             }
+            </div>
         </>
     )
 };
