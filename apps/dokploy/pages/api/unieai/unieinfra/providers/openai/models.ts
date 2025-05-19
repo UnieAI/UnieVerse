@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 	const { base_url, api_key } = req.body;
 
-	if (!base_url || !api_key) {
+	if (!base_url) {
 		return res.status(400).json({ message: "Missing base_url or api_key" });
 	}
 
