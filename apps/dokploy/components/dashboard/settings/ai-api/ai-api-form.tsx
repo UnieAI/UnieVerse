@@ -22,7 +22,11 @@ import { HandleAiThirdParty } from "@/components/dashboard/settings/ai-api/handl
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 
 import { toDatetimeLocalString } from "@/utils/time";
-import { AI_API_TAB_VALUE, AI_API_TAB_KEYS } from "@/utils/unieai/unieinfra/key";
+import {
+	AI_API_TAB_VALUE,
+	AI_API_TAB_KEYS,
+	UnieInfraDefaultTokenName
+} from "@/utils/unieai/unieinfra/key";
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "@/utils/unieai/unieinfra/token/UnieInfraTokenFunctions";
 
 export const AiApiForm = () => {
@@ -178,31 +182,41 @@ export const AiApiForm = () => {
 																<span className="text-sm font-medium">
 																	{token.name}
 																</span>
-																<CardDescription>
-																	{token.unlimited_quota ? `Unlimited` : `Used Quota: ${token.used_quota}/${token.remain_quota}`}
-																</CardDescription>
-																<CardDescription>
-																	{token.expired_time === -1 ? `Never Expires` : `Expiry Time: ${toDatetimeLocalString(new Date(token.expired_time * 1000))}`}
-																</CardDescription>
+																{(token.name !== UnieInfraDefaultTokenName) && (
+																	<>
+																		<CardDescription>
+																			{token.unlimited_quota ? `Unlimited` : `Used Quota: ${token.used_quota}/${token.remain_quota}`}
+																		</CardDescription>
+																		<CardDescription>
+																			{token.expired_time === -1 ? `Never Expires` : `Expiry Time: ${toDatetimeLocalString(new Date(token.expired_time * 1000))}`}
+																		</CardDescription>
+																	</>
+																)}
 															</div>
 															<div className="flex justify-between items-center">
-																<Switch
-																	className="mr-2"
-																	checked={token.status === 1}
-																	disabled={isLoadingTokens}
-																	onCheckedChange={async (checked) => {
-																		if (accessToken) {
-																			const payload: UnieInfraTokenStatusPayload = {
-																				id: token.id!,
-																				status: checked ? 1 : 2, // active = 1; close = 2;
+																{(token.name !== UnieInfraDefaultTokenName) && (
+																	<Switch
+																		className="mr-2"
+																		checked={token.status === 1}
+																		disabled={isLoadingTokens}
+																		onCheckedChange={async (checked) => {
+																			if (accessToken) {
+																				const payload: UnieInfraTokenStatusPayload = {
+																					id: token.id!,
+																					status: checked ? 1 : 2, // active = 1; close = 2;
+																				}
+																				await putTokenStatus(accessToken, payload);
+																			} else {
+																				toast.error("No access token available");
 																			}
-																			await putTokenStatus(accessToken, payload);
-																		} else {
-																			toast.error("No access token available");
-																		}
-																	}}
-																/>
-																<HandleUnieInfra tokenData={token} />
+																		}}
+																	/>
+																)}
+
+																{(token.name !== UnieInfraDefaultTokenName) && (
+																	<HandleUnieInfra tokenData={token} />
+																)}
+
 																<Button
 																	variant="ghost"
 																	size="icon"
@@ -220,27 +234,30 @@ export const AiApiForm = () => {
 																>
 																	<Copy className="size-4  text-primary group-hover:text-blue-500" />
 																</Button>
-																<DialogAction
-																	title="Delete AI"
-																	description="Are you sure you want to delete this AI?"
-																	type="destructive"
-																	onClick={async () => {
-																		if (accessToken) {
-																			await deleteToken(accessToken, token.id!);
-																		} else {
-																			toast.error("No access token available");
-																		}
-																	}}
-																>
-																	<Button
-																		variant="ghost"
-																		size="icon"
-																		className="group hover:bg-red-500/10 "
-																		disabled={isLoadingTokens}
+
+																{(token.name !== UnieInfraDefaultTokenName) && (
+																	<DialogAction
+																		title="Delete AI"
+																		description="Are you sure you want to delete this AI?"
+																		type="destructive"
+																		onClick={async () => {
+																			if (accessToken) {
+																				await deleteToken(accessToken, token.id!);
+																			} else {
+																				toast.error("No access token available");
+																			}
+																		}}
 																	>
-																		<Trash2 className="size-4 text-primary group-hover:text-red-500" />
-																	</Button>
-																</DialogAction>
+																		<Button
+																			variant="ghost"
+																			size="icon"
+																			className="group hover:bg-red-500/10 "
+																			disabled={isLoadingTokens}
+																		>
+																			<Trash2 className="size-4 text-primary group-hover:text-red-500" />
+																		</Button>
+																	</DialogAction>
+																)}
 															</div>
 														</div>
 													</div>

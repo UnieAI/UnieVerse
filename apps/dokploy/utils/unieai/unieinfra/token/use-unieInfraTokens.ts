@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isDevelopment, defaultTokenName } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, UnieInfraDefaultTokenName } from "@/utils/unieai/unieinfra/key";
 import {
     CreateDefaultToken,
     ListUnieInfraTokens,
@@ -95,9 +95,9 @@ export const useUnieInfraTokens = () => {
 
         // 取得當前擁有的 tokens
         let _tokens = await ListUnieInfraTokens(accessToken);
-        // 確認是否包含 defaultTokenName
+        // 確認是否包含 UnieInfraDefaultTokenName
         const matchedTokens: UnieInfraTokenPayload[] = _tokens.filter(
-            token => token.name === defaultTokenName
+            token => token.name === UnieInfraDefaultTokenName
         );
 
         let result = "";

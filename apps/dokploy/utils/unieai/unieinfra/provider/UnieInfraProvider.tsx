@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
-import { defaultTokenName } from '../key';
+import { UnieInfraDefaultTokenName } from '../key';
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "../token/UnieInfraTokenFunctions";
 
 import { useUnieInfraAccessToken } from '../user/use-unieInfraAccessToken';
@@ -45,9 +45,9 @@ export const UnieInfraProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
 
         if (accessToken) {
-            // 確認是否包含 defaultTokenName
+            // 確認是否包含 UnieInfraDefaultTokenName
             const matchedToken = tokens.find(token =>
-                token.name && token.name.includes(defaultTokenName)
+                token.name && token.name.includes(UnieInfraDefaultTokenName)
             );
 
             if (!matchedToken) fetchUnieInfraDefaultToken(accessToken);
