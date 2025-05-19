@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { isDevelopment } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, defaultTokenName } from "@/utils/unieai/unieinfra/key";
 import {
+    CreateDefaultToken,
     ListUnieInfraTokens,
     PostUnieInfraToken,
     PutUnieInfraToken,
@@ -13,11 +14,12 @@ import {
 } from "./UnieInfraTokenFunctions";
 
 export const useUnieInfraTokens = () => {
+    const [isSettingDefault, setIsSettingDefault] = useState(false);
     const [isGetting, setIsGetting] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
     const [isPuting, setIsPuting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [tokens, setTokens] = useState([]);
+    const [tokens, setTokens] = useState<UnieInfraTokenPayload[]>([]);
 
     const getTokens = async (accessToken: string) => {
         if (isGetting) return;
@@ -85,5 +87,44 @@ export const useUnieInfraTokens = () => {
         return result;
     };
 
-    return { tokens, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: (isGetting || isPosting || isPuting || isDeleting) };
+    const fetchDefaultToken = async (accessToken: string, reCreateToken: boolean): Promise<string> => {
+        if (isSettingDefault) return Error;
+
+        setIsSettingDefault(true);
+
+        // 取得當前擁有的 tokens
+        let _tokens = await ListUnieInfraTokens(accessToken);
+        // 確認是否包含 defaultTokenName
+        const matchedTokens: UnieInfraTokenPayload[] = _tokens.filter(
+            token => token.name === defaultTokenName
+        );
+
+        let result = "";
+        if (matchedTokens.length > 0) {
+            if (reCreateToken || matchedTokens.length > 1) {
+                // 刪除既有 token
+                for (const targetToken of matchedTokens) {
+                    const deleteRes = await DeleteUnieInfraToken(accessToken, targetToken.id!);
+                }
+                // 重新生成 defaultToken
+                result = await CreateDefaultToken(accessToken);
+            } else {
+                result = matchedTokens[0]?.key!;
+            }
+        } else {
+            // 重新生成 defaultToken
+            result = await CreateDefaultToken(accessToken);
+        }
+
+        if (isDevelopment) {
+            if (result !== Error) console.warn(`UnieInfra default token:\r\nsk-${result}`);
+            else console.warn(`UnieInfra fetch default token Error`);
+        }
+        _tokens = await ListUnieInfraTokens(accessToken);
+        setTokens(_tokens);
+        setIsSettingDefault(false);
+        return result;
+    };
+
+    return { tokens, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: (isSettingDefault || isGetting || isPosting || isPuting || isDeleting) };
 };
