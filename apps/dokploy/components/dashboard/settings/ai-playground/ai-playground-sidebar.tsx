@@ -417,7 +417,7 @@ export const AiPlaygroundSidebar = ({
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-semibold">Model Params Payload</h3>
 
-                                    {!isDevelopment && (
+                                    {isDevelopment && (
                                         <>
                                             <div className="flex flex-row justify-between">
 
