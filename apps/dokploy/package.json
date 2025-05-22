@@ -117,7 +117,6 @@
 		"lodash": "4.17.21",
 		"lucide-react": "^0.469.0",
 		"micromatch": "4.0.8",
-		"motion": "^12.12.1",
 		"nanoid": "3",
 		"next": "^15.2.4",
 		"next-i18next": "^15.3.1",
