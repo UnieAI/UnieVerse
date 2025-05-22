@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react'
-import { AutoResizeTextarea } from "@/components/ui/autoResizeTextareaProps";
+import { AutoResizeTextarea } from "@/components/ui/autoResizeTextarea";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"

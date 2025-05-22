@@ -1,33 +1,52 @@
 "use client";
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { ResizeTextarea } from '@/components/ui/resizeTextarea';
 import { UnieAISVG } from "@/utils/unieai/unieai-svg";
 import { AiPlaygroundWaveLoading } from "./ai-playground-wave-loading";
 import { AiPlaygroundMessageTimingDetail } from "./ai-playground-message-timing-detail";
 
+import { Pencil, Trash2, Copy, Save, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+
 import { copyImageLink, normalizeUrl } from "./functions";
 
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
 } from "@/components/ui/accordion"
 
 interface AiPlaygroundMessageRenderProps {
     thread: number;
     messages: any;
+    setParallelMessages: any;
     threadModels: any;
     setThreadModels: any;
     model: any;
     models: any;
+    handleRegenerateMessage: any;
+    isLoading: boolean;
+    isReplying: boolean;
 }
 
-export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setThreadModels, model, models }: AiPlaygroundMessageRenderProps) => {
+export const AiPlaygroundMessageRender = ({ thread, messages, setParallelMessages, threadModels, setThreadModels, model, models, handleRegenerateMessage, isLoading, isReplying }: AiPlaygroundMessageRenderProps) => {
     const isMobile = useIsMobile();
+
+    const [editIndex, setEditIndex] = useState<number | null>(null);
+    const [editText, setEditText] = useState<string>("");
+
+    useEffect(() => {
+        if (isLoading || isReplying) {
+            setEditIndex(null);
+            setEditText("");
+        }
+    }, [isLoading, isReplying]);
+
     return (
         <>
             <div className="flex  flex-row items-start justify-between gap-6 px-4 text-sm text-zinc-500 font-semibold mb-1">
@@ -48,48 +67,158 @@ export const AiPlaygroundMessageRender = ({ thread, messages, threadModels, setT
                 </select>
             </div>
             <div className='w-full flex flex-col gap-5 mt-5'>
-            {
-                messages.map((message: any, index: any) => (
-                    <motion.div
-                        key={index}
-                        className={`mt-5 w-full flex mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                    >
-                        {/* {message.role === 'assistant' && (
-                            <div className="border rounded-full h-8 w-8 flex items-center justify-center">
-                                <UnieAISVG className='text-blue-500 h-6 w-6' />
-                            </div>
-                        )} */}
-
-                        <div
-                            className={`px-4  py-2 max-w-[90%] ${(message.role === 'user') && "bg-zinc-200 mr-4 justify-end w-fit dark:bg-zinc-600"}`}
-                            style={{
-                                borderRadius: '0.9rem',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                            }}
+                {
+                    messages.map((message: any, index: any) => (
+                        <motion.div
+                            key={index}
+                            className={`flex mt-5 w-full mr-10 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
                         >
+
                             {(message.content === "loading" && message.loading) ? (
                                 <div className='flex flex-row'>
                                     <AiPlaygroundWaveLoading />
                                 </div>
-                            ) : (
-                                <>
-                                    {/* 渲染訊息 */}
-                                    <RenderedResult content={message.content} />
+                            ) : (editIndex === index) ? (
 
-                                    {/* 顯示回應時間與耗時 */}
-                                    {(message.role === "assistant") && (
-                                        <AiPlaygroundMessageTimingDetail message={message} />
-                                    )}
-                                </>
+                                <div className="flex flex-col w-full">
+                                    <ResizeTextarea
+                                        value={editText}
+                                        onChange={(e) => setEditText(e.target.value)}
+                                        className="text-sm p-2 border rounded bg-white dark:bg-zinc-800"
+                                    />
+
+                                    <>
+                                        <div className={`flex flex-row ${message.role === 'user' ? 'justify-end' : 'justify-between'}`}>
+                                            <div className="flex flex-row gap-2 mt-5 mr-4">
+                                                <button
+                                                    className="hover:opacity-50 text-neutral-500"
+                                                    disabled={isLoading || isReplying}
+                                                    onClick={() => {
+                                                        if (!editText.trim()) {
+                                                            toast.error("Update msg cannot be empty.");
+                                                            return;
+                                                        }
+                                                        const updatedMessages = [...messages];
+                                                        updatedMessages[index] = {
+                                                            ...updatedMessages[index],
+                                                            content: editText,
+                                                        };
+                                                        setParallelMessages((prev: any) => {
+                                                            const updated = [...prev];
+                                                            updated[thread - 1] = updatedMessages;
+                                                            return updated;
+                                                        });
+                                                        setEditIndex(null);
+                                                    }}
+                                                >
+                                                    <Save className="w-4 h-4 opacity-60" />
+                                                </button>
+
+                                                <button
+                                                    className="hover:opacity-50 text-red-500"
+                                                    disabled={isLoading || isReplying}
+                                                    onClick={() => setEditIndex(null)}
+                                                >
+                                                    <X className="w-4 h-4 opacity-60" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                </div>
+
+                            ) : (
+                                <div className="flex flex-col">
+                                    <div
+                                        className={`px-4 py-2 max-w-[90%] ${(message.role === 'user') && "justify-end bg-zinc-200 mr-4 w-fit dark:bg-zinc-600"}`}
+                                        style={{
+                                            borderRadius: '0.9rem',
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                        }}
+                                    >
+                                        <RenderedResult content={message.content} />
+                                    </div>
+
+                                    <div className={`flex flex-row ${message.role === 'user' ? 'justify-end' : 'justify-between'}`}>
+                                        {(message.role === "assistant") ? (
+                                            <AiPlaygroundMessageTimingDetail message={message} />
+                                        ) : (<></>)}
+
+                                        <div className="flex flex-row gap-2 mt-5 mr-4">
+                                            <button
+                                                className="hover:opacity-50 text-neutral-500"
+                                                disabled={isLoading || isReplying}
+                                                onClick={() => {
+                                                    setEditIndex(index);
+                                                    setEditText(message.content);
+                                                }}
+                                            >
+                                                <Pencil className="w-4 h-4 opacity-60" />
+                                            </button>
+
+                                            {(message.role === "assistant") && (
+                                                <>
+                                                    <button
+                                                        className="hover:opacity-50 text-neutral-500"
+                                                        disabled={isLoading || isReplying}
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(message.content)
+                                                                .then(() => console.log("訊息已複製"))
+                                                                .catch(() => alert("無法複製訊息"));
+                                                        }}
+                                                    >
+                                                        <Copy className="w-4 h-4 opacity-60" />
+                                                    </button>
+
+                                                    <button
+                                                        className="hover:opacity-50 text-neutral-500"
+                                                        disabled={isLoading || isReplying}
+                                                        onClick={() => handleRegenerateMessage(thread - 1, index)}
+                                                    >
+                                                        <RotateCcw className="w-4 h-4 opacity-60" />
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {(message.role === "user") && (
+                                                <button
+                                                    className="hover:opacity-50 hover:text-red-500 text-neutral-500"
+                                                    disabled={isLoading || isReplying}
+                                                    onClick={() => {
+                                                        if (!window.confirm("確定要刪除這則訊息以及之後所有訊息嗎？")) return;
+
+                                                        setParallelMessages((prev: any) => {
+                                                            const updated = [...prev];
+                                                            const currentThreadMessages = [...messages];
+
+                                                            // ⛔️ 刪除從該 index 開始的所有訊息
+                                                            const trimmedMessages = currentThreadMessages.slice(0, index);
+
+                                                            updated[thread - 1] = trimmedMessages;
+                                                            return updated;
+                                                        });
+
+                                                        // 如果剛好正在編輯中，也取消編輯狀態
+                                                        if (editIndex !== null && editIndex >= index) {
+                                                            setEditIndex(null);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="w-4 h-4 opacity-60" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             )}
-                        </div>
-                    </motion.div>
-                ))
-            }
+
+
+                        </motion.div>
+                    ))
+                }
             </div>
         </>
     )
@@ -245,7 +374,7 @@ const TextComponent = ({ text }: { text: string }) => {
                         <div
                             className=''
                             key={index}
-                            dangerouslySetInnerHTML={{ __html: part.replace(/^\s*\n/, '').replace('\n\n/g','\n') }}
+                            dangerouslySetInnerHTML={{ __html: part.replace(/^\s*\n/, '').replace('\n\n/g', '\n') }}
                         />
                     );
                 }
@@ -282,7 +411,7 @@ const ThinkBlock = ({ content }: { content: string }) => {
                         />
                     </AccordionContent>
                 </AccordionItem>
-                </Accordion>
+            </Accordion>
         </div>
     );
 };

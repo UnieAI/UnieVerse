@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from "next/navigation"
 import { api } from "@/utils/api";
-import { AutoResizeTextarea } from "@/components/ui/autoResizeTextareaProps";
+import { AutoResizeTextarea } from "@/components/ui/autoResizeTextarea";
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { PanelRight, Send, CircleStop } from 'lucide-react'
@@ -234,7 +234,7 @@ export const AiPlaygroundForm = () => {
             ]);
         }
 
-        // ✅ 同步更新狀態
+        // 同步更新狀態
         setParallelMessages(newParallelMessages);
 
 
@@ -418,6 +418,197 @@ export const AiPlaygroundForm = () => {
         setMessage("");
         toast.dismiss(toastId);
     };
+
+    const handleRegenerateMessage = async (threadIndex: number, cutoffIndex: number) => {
+        if (!apiUrl || !apiToken) {
+            toast.error("Invalid api url or api token.");
+            return;
+        }
+
+        if ((threadModels[threadIndex] === "" || !threadModels[threadIndex]) && defaultModel === "") {
+            toast.error(`Thread ${threadIndex + 1} has no model selected, and no default model is set.`);
+            return;
+        }
+
+        if (isLoading || isReplying) {
+            toast.error("Wait for loading or replying...");
+            return;
+        }
+
+        const msgs: any = parallelMessages[threadIndex];
+
+        // 🧹 刪除原有訊息（含 index 之後的）
+        const currentMessages = [...msgs];
+        const trimmedMessages = currentMessages.slice(0, cutoffIndex);
+        const lastUser = [...trimmedMessages].reverse().find(m => m.role === "user");
+
+        if (!lastUser) {
+            toast.error("No previous user message found.");
+            return;
+        }
+
+        const userMessage = { role: "user", content: lastUser.content };
+        const loadingMessage = { role: "assistant", content: "loading", loading: true, state: "pending" };
+
+        const updated = [...trimmedMessages];
+
+        // 找到最後一則 user 訊息的 index
+        const lastUserIndex = [...updated].reverse().findIndex(m => m.role === "user");
+        if (lastUserIndex !== -1) {
+            const trueIndex = updated.length - 1 - lastUserIndex;
+            updated[trueIndex] = userMessage; // 替換掉原本的 user
+        }
+
+        // append loading
+        const newThreadMessages: Message[] = [...updated, loadingMessage];
+
+        setIsReplying(true);
+        setIsLoading(true);
+        const toastId = toast.loading(`Regenerating response for thread #${threadIndex + 1}...`);
+
+        // 同步更新 messages
+        setParallelMessages((prev: any) => {
+            const updated = [...prev];
+            updated[threadIndex] = newThreadMessages;
+            return updated;
+        });
+
+        try {
+            const controller = new AbortController();
+            abortControllersRef.current[threadIndex] = controller;
+
+            const history = newThreadMessages.filter(m => m.role !== "system" && !m.loading);
+
+            const messages = defaultModelParams.system_prompt?.trim()
+                ? [{ role: "system", content: defaultModelParams.system_prompt }, ...history]
+                : history;
+
+            const payload = JSON.stringify({
+                model: threadModels[threadIndex] || defaultModel,
+                messages,
+                ...defaultModelParams,
+                stream: true,
+            });
+
+            const requestTime = new Date().toISOString();
+
+            const response = await fetch(`${apiUrl}/chat/completions`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiToken}`,
+                },
+                body: payload,
+                signal: controller.signal,
+            });
+
+            if (!response.ok) {
+                const errorJson = await response.json();
+                throw new Error(errorJson.error?.message || "Request failed");
+            }
+
+            if (!response.body) throw new Error("No response stream");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let partialContent = "";
+
+            setParallelMessages((prev: any) => {
+                const updated = [...prev];
+                const conv = [...updated[threadIndex]];
+                conv[conv.length - 1] = {
+                    role: "assistant",
+                    content: "",
+                    requestTime: requestTime,
+                    state: "pending",
+                };
+                updated[threadIndex] = conv;
+                return updated;
+            });
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    setParallelMessages((prev: any) => {
+                        const updated = [...prev];
+                        const conv = [...updated[threadIndex]];
+                        const last = conv[conv.length - 1];
+                        if (last.role === "assistant") {
+                            conv[conv.length - 1] = {
+                                ...last,
+                                state: "complete",
+                            };
+                            updated[threadIndex] = conv;
+                        }
+                        return updated;
+                    });
+                    break;
+                }
+
+                partialContent += decoder.decode(value, { stream: true });
+                const lines = partialContent.split("\n");
+                partialContent = lines.pop() || "";
+
+                for (const line of lines) {
+                    if (!line.trim() || line.trim() === "data: [DONE]") continue;
+                    if (line.startsWith("data: ")) {
+                        try {
+                            const json = JSON.parse(line.slice(6));
+                            const delta = json.choices?.[0]?.delta?.content;
+                            if (delta) {
+                                const now = Date.now();
+                                const responseTime = new Date();
+                                setParallelMessages((prev: any) => {
+                                    const updated = [...prev];
+                                    const conv = [...updated[threadIndex]];
+                                    const last = conv[conv.length - 1];
+                                    if (last.role === "assistant") {
+                                        conv[conv.length - 1] = {
+                                            ...last,
+                                            content: last.content + delta,
+                                            responseStartTime: last.responseStartTime || responseTime.toISOString(),
+                                            responseEndTime: responseTime.toISOString(),
+                                            durationMs: now - new Date(last.responseStartTime || now).getTime(),
+                                            state: "streaming",
+                                        };
+                                        updated[threadIndex] = conv;
+                                    }
+                                    return updated;
+                                });
+                            }
+                        } catch (e) {
+                            console.warn("Stream JSON parse error", e);
+                        }
+                    }
+                }
+            }
+        } catch (err: any) {
+            const responseTime = new Date();
+            toast.error(`Regeneration failed: ${err.message}`);
+
+            setParallelMessages((prev: any) => {
+                const updated = [...prev];
+                const conv = [...updated[threadIndex]];
+                const last = conv[conv.length - 1];
+                if (last.role === "assistant") {
+                    conv[conv.length - 1] = {
+                        ...last,
+                        content: "Error occurred during regeneration.",
+                        responseEndTime: responseTime.toISOString(),
+                        state: "error",
+                    };
+                    updated[threadIndex] = conv;
+                }
+                return updated;
+            });
+        }
+
+        setIsLoading(false);
+        setIsReplying(false);
+        setMessage("");
+        toast.dismiss(toastId);
+    };
+
 
     function abortControllers() {
         abortControllersRef.current.forEach((controller) => {
@@ -630,7 +821,7 @@ export const AiPlaygroundForm = () => {
                     {selectedIndexes.map((index, idx) => (
                         <React.Fragment key={index}>
                             <div className="relative flex-1 p-4 overflow-auto">
-                                <AiPlaygroundMessageRender thread={index + 1} messages={parallelMessages[index] || []} threadModels={threadModels} setThreadModels={setThreadModels} model={defaultModel} models={models} />
+                                <AiPlaygroundMessageRender thread={index + 1} messages={parallelMessages[index] || []} setParallelMessages={setParallelMessages} threadModels={threadModels} setThreadModels={setThreadModels} model={defaultModel} models={models} handleRegenerateMessage={handleRegenerateMessage} isLoading={isLoading} isReplying={isReplying} />
                             </div>
                             {idx < selectedIndexes.length - 1 && (
                                 <div className={`w-px ${isMobile && "mx-2"} bg-zinc-100 dark:bg-zinc-900`} />
