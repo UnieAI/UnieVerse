@@ -21,7 +21,9 @@ const DomainsList = ({ data }) => {
                 {item.host}
                 <ExternalLink className="size-4" />
               </Link>
-              <ConnectAI appurl={url} data={data}/>
+              {(item.serviceName === "unieinfra") && (
+                <ConnectAI appurl={url} data={data} />
+              )}
             </div>
           )
         })}
