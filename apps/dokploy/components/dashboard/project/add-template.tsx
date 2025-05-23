@@ -173,6 +173,15 @@ export const AddTemplate = ({ projectId, baseUrl }: Props) => {
 									className="w-full sm:w-[300px]"
 									value={customBaseUrl || ""}
 								/>
+								<button
+									className="hover:opacity-50 duration-100"
+									onClick={() => {
+										const _url = "https://templates.unieai.com";
+										if (customBaseUrl !== _url) setCustomBaseUrl(_url);
+									}}
+								>
+									<img src="/unieinfra-logo.png" className="size-6 rounded-full" />
+								</button>
 								<Popover modal={true}>
 									<PopoverTrigger asChild>
 										<Button
