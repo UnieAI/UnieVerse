@@ -60,17 +60,45 @@ const collectGpuTypeSet = (labels: Object) => {
 	return resMap;
 }
 
-const parseGpuInfo = (labels: Object) => {
-	const resMap: { [key: string]: string[] } = {};
+const parseGpuInfo = (labels: Object): { [key: string]: { labels?: string[], used_by?: string | null } } => {
+	const resMap: { [key: string]: object } = {};
 	for (const [label, lbJValue] of Object.entries(labels)) {
 		if (label.startsWith("uvs-gpuinfo-")) {
-			const lbName = label.slice("uvs-gpuinfo-".length).toLowerCase();
-			const lbValue: string[] = JSON.parse(lbJValue);
+			const lbName = label;
+			const lbValue: object[] = JSON.parse(lbJValue);
 			resMap[lbName] = lbValue;
 		}
 	}
 	return resMap;
 }
+
+const execCommand = async (command: string, serverId?: string) => {
+	try {
+		let stdout = "";
+		let stderr = "";
+
+		if (serverId) {
+			const result = await execAsyncRemote(serverId, command);
+			stdout = result.stdout;
+			stderr = result.stderr;
+		} else {
+			const result = await execAsync(command);
+			stdout = result.stdout;
+			stderr = result.stderr;
+		}
+
+		if (stderr) {
+			console.error(`Error: ${stderr}`);
+			return;
+		}
+
+		return stdout;
+	} catch (error) {
+		console.error("execCommand: Uncaught error:", error);
+		return;
+	}
+};
+
 
 const allocateAutoGPU = async (
 	compose: Compose,
@@ -137,10 +165,10 @@ const allocateAutoGPU = async (
 	for (const node of nodes) {
 		let okay = true;
 
-		const gpuInfos = parseGpuInfo(node.Spec.Labels);
 		const selectorGpus = collectGpuTypeSet(node.Spec.Labels);
-		console.log("ALLOCATE AUTO GPU:", "gpuInfos:", gpuInfos);
+		const gpuInfoMap = parseGpuInfo(node.Spec.Labels);
 		console.log("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
+		// console.log("ALLOCATE AUTO GPU:", "gpuInfoMap:", gpuInfoMap);
 
 		const gpuAllocated: { [key: string]: string[] } = {};
 		for (const lbName of privKeys) {
@@ -159,7 +187,14 @@ const allocateAutoGPU = async (
 					lbValCount++
 				) {
 					const gpuDevice = gpuDeviceIter.next().value!;
-					gpuDevices!.delete(gpuDevice);
+					console.log("ALLOCATE AUTO GPU:", "service:", service, "gpuDevice:", gpuDevice);
+
+					const gpuLabelList = gpuInfoMap[`uvs-gpuinfo-${gpuDevice.toLowerCase()}`]!.labels ?? [];
+					console.log("ALLOCATE AUTO GPU:", "gpuLabelList:", gpuLabelList);
+					for (const gpuLabel of gpuLabelList) {
+						selectorGpus[gpuLabel]?.delete(gpuDevice);
+					}
+					// gpuDevices!.delete(gpuDevice);
 
 					if (!(service in gpuAllocated)) {
 						gpuAllocated[service] = [];
@@ -206,17 +241,57 @@ const allocateAutoGPU = async (
 			}
 
 			// Add service labels (for backward selector)
+			const serviceUuidMap: { [key: string]: string } = {};
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const uuid = crypto.randomUUID();
+				serviceUuidMap[svcName] = uuid;
+
+				const labels = svc.labels ?? {};
+				if (Array.isArray(labels)) {
+					labels.push(`uvs-uuid=${uuid}`);
+				} else {
+					labels["uvs-uuid"] = uuid;
+				}
+				svc.labels = labels;
+			}
 
 			// Update GPU list labels
+			for (const [gpuType, leftGpuDevices] of Object.entries(selectorGpus)) {
+				// update (by remove then add) the left GPU devices
+				const leftGpuDeviceSpec = JSON.stringify(Array.from(leftGpuDevices));
+				await execCommand(`docker node update --label-rm ${gpuType} ${node["ID"]}`, compose.serverId);
+				await execCommand(
+					`docker node update --label-add ${gpuType}='${leftGpuDeviceSpec}' ${node["ID"]}`,
+					compose.serverId
+				);
+			}
 
 			// Update GPU info
+			for (const [service, serviceGpuDevices] of Object.entries(gpuAllocated)) {
+				for (const gpuDevice of serviceGpuDevices) {
+					const gpuDeviceId = gpuDevice.toLowerCase();
+					const gpuInfoLabel = `uvs-gpuinfo-${gpuDeviceId}`;
+
+					const gpuInfo = gpuInfoMap[gpuInfoLabel];
+					console.log("ALLOCATE AUTO GPU:", "gpuInfoLabel:", gpuInfoLabel);
+					console.log("ALLOCATE AUTO GPU:", "gpuInfo:", gpuInfo);
+					gpuInfo!.used_by = serviceUuidMap[service];
+
+
+					await execCommand(`docker node update --label-rm ${gpuInfoLabel} ${node["ID"]}`, compose.serverId);
+					await execCommand(
+						`docker node update --label-add ${gpuInfoLabel}='${JSON.stringify(gpuInfo)}' ${node["ID"]}`,
+						compose.serverId
+					);
+				}
+			}
 
 			break;
 		}
 	}
 
 	if (!foundNode) {
-		throw new Error(`Insufficient resource for resources: ${privServiceResources}`);
+		throw new Error(`Insufficient resource for resources: ${JSON.stringify(privServiceResources)}`);
 	}
 
 	console.log("ALLOCATE AUTO GPU: result:");
