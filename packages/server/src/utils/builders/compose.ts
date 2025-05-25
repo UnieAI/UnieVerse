@@ -88,7 +88,7 @@ const allocateAutoGPU = async (
 		return null;
 	}
 
-	const privResources: { [key: string]: number } = {};
+	const privServiceResources: { [key: string]: { service: string, count: number }[] } = {};
 	for (const [svcName, svc] of Object.entries(result?.services ?? {})) {
 		console.log("ALLOCATE AUTO GPU: svcName: ", svcName);
 		console.log("ALLOCATE AUTO GPU: svc:", svc);
@@ -105,16 +105,19 @@ const allocateAutoGPU = async (
 				const lbName = req.kind;
 				const lbValue = req.value;
 
-				privResources[lbName] = (privResources[lbName] || 0) + lbValue;
+				if (!(lbName in privServiceResources)) {
+					privServiceResources[lbName] = [];
+				}
+				privServiceResources[lbName]!.push({ service: svcName, count: lbValue });
 			}
 			delete resResv.unieai;
 		}
 	}
-	console.log("ALLOCATE AUTO GPU: ", "privResources:", privResources);
+	console.log("ALLOCATE AUTO GPU: ", "privResources:", privServiceResources);
 
 	// The GPU names are designed to be categorized by prefix
 	//   i.e. "gpu-nvidia-h200" would be one of "gpu-nvidia".
-	const privKeys = Object.keys(privResources).sort(
+	const privKeys = Object.keys(privServiceResources).sort(
 		(a: string, b: string) => {
 			// For the topology to be right, we need to sort them.
 			// TLDR; sort by longer length, then by dictionary order.
@@ -136,30 +139,53 @@ const allocateAutoGPU = async (
 		console.log("ALLOCATE AUTO GPU:", "gpuInfos:", gpuInfos);
 		console.log("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
 
-		const gpuAllocated = [];
+		const gpuAllocated: { [key: string]: string[] } = {};
 		for (const lbName of privKeys) {
-			const lbValue = privResources[lbName]!;
+			const lbValue = privServiceResources[lbName]!;
+			const lbTotalRequest = lbValue.reduce((prev, curr) => prev + curr.count, 0);
 			const gpuDevices = selectorGpus[lbName];
-			if ((gpuDevices?.size || 0) < lbValue) {
+			if ((gpuDevices?.size || 0) < lbTotalRequest) {
 				okay = false;
 				break;
 			}
 
-			for (let lbValCount = 0, gpuDeviceIter = gpuDevices!.values();
-				lbValCount < lbValue;
-				lbValCount++
-			) {
-				const gpuDevice = gpuDeviceIter.next().value!;
-				gpuDevices!.delete(gpuDevice);
-				gpuAllocated.push(gpuDevice);
+			const gpuDeviceIter = gpuDevices!.values();
+			for (const { service, count } of lbValue) {
+				for (let lbValCount = 0;
+					lbValCount < count;
+					lbValCount++
+				) {
+					const gpuDevice = gpuDeviceIter.next().value!;
+					gpuDevices!.delete(gpuDevice);
+
+					if (!(service in gpuAllocated)) {
+						gpuAllocated[service] = [];
+					}
+					gpuAllocated[service]!.push(gpuDevice);
+				}
+
 			}
 		}
 
 		if (okay) {
 			foundNode = node;
 			foundDevices = gpuAllocated;
+
+			// if (result.services)
+			console.log("ALLOCATE AUTO GPU: gpuAllocated: ", gpuAllocated);
+
+			// Update GPU list labels
+
+
+			// Update GPU info
+
+
 			break;
 		}
+	}
+
+	if (!foundNode) {
+		throw new Error(`Insufficient resource for resources: ${privServiceResources}`);
 	}
 
 	console.log("ALLOCATE AUTO GPU: Found node: ", foundNode);
