@@ -115,6 +115,10 @@ const allocateAutoGPU = async (
 	}
 	console.log("ALLOCATE AUTO GPU: ", "privResources:", privServiceResources);
 
+	if (!privServiceResources) {
+		return result;
+	}
+
 	// The GPU names are designed to be categorized by prefix
 	//   i.e. "gpu-nvidia-h200" would be one of "gpu-nvidia".
 	const privKeys = Object.keys(privServiceResources).sort(
@@ -130,7 +134,6 @@ const allocateAutoGPU = async (
 
 	// Simluate. Find first available node.
 	let foundNode = null;
-	let foundDevices = null;
 	for (const node of nodes) {
 		let okay = true;
 
@@ -169,16 +172,44 @@ const allocateAutoGPU = async (
 
 		if (okay) {
 			foundNode = node;
-			foundDevices = gpuAllocated;
 
-			// if (result.services)
-			console.log("ALLOCATE AUTO GPU: gpuAllocated: ", gpuAllocated);
+			// Add placement
+			// Note: this is the definite (extra) constraint here.
+			// We would not allow service in the same file to be scheduled on different nodes.
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const placement = svc.deploy!.placement ?? {};
+				const constraints = placement.constraints ?? [];
+
+				constraints.push(`node.id==${node["ID"]}`);
+				placement.constraints = constraints;
+				svc.deploy!.placement = placement;
+			}
+
+			// console.log("ALLOCATE AUTO GPU: gpuAllocated: ", gpuAllocated);
+
+			// Add service GPU spec
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const gpuDevices = gpuAllocated[svcName];
+				if (gpuDevices) {
+					const deviceSpec = gpuDevices.join(",");
+					const res = svc.environment ?? {};
+					console.log(`ALLOCATE AUTO GPU: service '${svcName}: svc.environment: '`, svc.environment);
+					if (Array.isArray(res)) {
+						// override from the back?
+						// Won't allow specifying this env, though
+						res.push(`NVIDIA_VISIBLE_DEVICES=${deviceSpec}`);
+					} else {
+						res["NVIDIA_VISIBLE_DEVICES"] = deviceSpec;
+					}
+					svc.environment = res;
+				}
+			}
+
+			// Add service labels (for backward selector)
 
 			// Update GPU list labels
 
-
 			// Update GPU info
-
 
 			break;
 		}
@@ -188,8 +219,8 @@ const allocateAutoGPU = async (
 		throw new Error(`Insufficient resource for resources: ${privServiceResources}`);
 	}
 
-	console.log("ALLOCATE AUTO GPU: Found node: ", foundNode);
-	console.log("ALLOCATE AUTO GPU: gpuAllocated: ", foundDevices);
+	console.log("ALLOCATE AUTO GPU: result:");
+	console.dir(result, { depth: null });
 	return result;
 }
 
