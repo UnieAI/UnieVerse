@@ -1,14 +1,20 @@
+import { paths } from "@dokploy/server/constants";
+import type { InferResultType } from "@dokploy/server/types/with";
+import boxen from "boxen";
+import { dump } from "js-yaml";
 import {
 	createWriteStream,
 	existsSync,
 	mkdirSync,
 	writeFileSync,
 } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { InferResultType } from "@dokploy/server/types/with";
-import boxen from "boxen";
+import { Compose, ComposeSpecification, getNodeInfo, getSwarmNodes } from "../..";
 import {
+	getComposePath,
+	loadDockerCompose,
+	loadDockerComposeRemote,
 	writeDomainsToCompose,
 	writeDomainsToComposeRemote,
 } from "../docker/domain";
@@ -24,6 +30,97 @@ export type ComposeNested = InferResultType<
 	"compose",
 	{ project: true; mounts: true; domains: true }
 >;
+
+const writeBackToCompose = async (
+	compose: Compose,
+	composeConverted: ComposeSpecification | null,
+) => {
+	const path = getComposePath(compose); // from domain utils
+	const composeString = dump(composeConverted, { lineWidth: 1000 });
+	try {
+		await writeFile(path, composeString, "utf8");
+	} catch (error) {
+		throw error;
+	}
+};
+
+const countGpuResources = (labels: Object) => {
+	const resMap: { [key: string]: number } = {};
+	for (const [label, lbJValue] of Object.entries(labels)) {
+		// console.log("COUNT_GPU_RESOURCES:", "[label, lbJValue]:", [label, lbJValue]);
+		if (label.startsWith("uvs-gpu-")) {
+			const lbName = label;  // label.slice("uvs-gpu-".length);
+			const lbValue: string[] = JSON.parse(lbJValue);
+			resMap[lbName] = (resMap[lbName] || 0) + lbValue.length;
+		}
+	}
+	return resMap;
+}
+
+const allocateAutoGPU = async (
+	compose: Compose,
+	nodes: any[],
+) => {
+	// load docker compose (domain.ts:addDomainToCompose)
+	let result: ComposeSpecification | null;
+	if (compose.serverId) {
+		result = await loadDockerComposeRemote(compose);
+	} else {
+		result = await loadDockerCompose(compose);
+	}
+
+	if (!result) {
+		return null;
+	}
+
+	const nodeResources = nodes.map(node => ({ node: node, resMap: countGpuResources(node.Spec.Labels) }));
+	console.log("ALLOCATE AUTO GPU: NODE RESOURCES: ", nodeResources);
+
+	const privResources: { [key: string]: number } = {};
+	for (const [svcName, svc] of Object.entries(result?.services ?? {})) {
+		console.log("ALLOCATE AUTO GPU: svcName: ", svcName);
+		console.log("ALLOCATE AUTO GPU: svc:", svc);
+
+		// console.log("ALLOCATE AUTO GPU: DEVICES:", svc.deploy?.resources?.reservations?.devices);
+
+		const resResv: any | null = svc.deploy?.resources?.reservations;
+		console.log("ALLOCATE AUTO GPU: RESERVATION:", resResv);
+
+		const privResv: any[] | null = resResv?.unieai;
+		if (privResv) {
+			console.log("ALLOCATE AUTO GPU: privResv:", privResv);
+			for (const req of privResv) {
+				const lbName = req.kind;
+				const lbValue = req.value;
+
+				privResources[lbName] = (privResources[lbName] || 0) + lbValue;
+			}
+			delete resResv.unieai;
+		}
+	}
+	console.log("ALLOCATE AUTO GPU: ", "privResources:", privResources);
+
+	// find first available node
+	let foundNode = null;
+	for (const {node, resMap} of nodeResources) {
+		let okay = true;
+		for (const [lbName, lbValue] of Object.entries(privResources)) {
+			if ((resMap[lbName] || 0) < lbValue) {
+				okay = false;
+				break;
+			}
+		}
+
+		if (okay) {
+			foundNode = node;
+			break;
+		}
+	}
+
+	console.log("ALLOCATE AUTO GPU: Found node: ", foundNode);
+	return result;
+}
+
 export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 	const writeStream = createWriteStream(logPath, { flags: "a" });
 	const { sourceType, appName, mounts, composeType, domains } = compose;
@@ -38,6 +135,16 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 				`docker network inspect ${compose.appName} >/dev/null 2>&1 || docker network create --attachable ${compose.appName}`,
 			);
 		}
+
+		const nodes = await getSwarmNodes(compose.serverId).then(
+			nodes => Promise.all(
+				(nodes ?? []).map(({ ID: nodeId }) => getNodeInfo(nodeId, compose.serverId))
+			)
+		);
+
+		// console.log("BUILD COMPOSE: Swarm Nodes: ", nodes);
+		const allocateRes = await allocateAutoGPU(compose, nodes);
+		await writeBackToCompose(compose, allocateRes);
 
 		const logContent = `
     App Name: ${appName}
