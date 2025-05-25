@@ -44,14 +44,29 @@ const writeBackToCompose = async (
 	}
 };
 
-const countGpuResources = (labels: Object) => {
-	const resMap: { [key: string]: number } = {};
+const collectGpuTypeSet = (labels: Object) => {
+	const resMap: { [key: string]: Set<string> } = {};
 	for (const [label, lbJValue] of Object.entries(labels)) {
-		// console.log("COUNT_GPU_RESOURCES:", "[label, lbJValue]:", [label, lbJValue]);
-		if (label.startsWith("uvs-gpu-")) {
-			const lbName = label;  // label.slice("uvs-gpu-".length);
+		if (label === "uvs-gpu" || label.startsWith("uvs-gpu-")) {
+			const lbName = label;
 			const lbValue: string[] = JSON.parse(lbJValue);
-			resMap[lbName] = (resMap[lbName] || 0) + lbValue.length;
+			console.log("COUNT_GPU_RESOURCES:", "[lbName, lbValue]:", [lbName, lbValue]);
+			if (!(lbName in resMap)) {
+				resMap[lbName] = new Set();
+			}
+			lbValue.forEach(gpuName => resMap[lbName]!.add(gpuName));
+		}
+	}
+	return resMap;
+}
+
+const parseGpuInfo = (labels: Object) => {
+	const resMap: { [key: string]: string[] } = {};
+	for (const [label, lbJValue] of Object.entries(labels)) {
+		if (label.startsWith("uvs-gpuinfo-")) {
+			const lbName = label.slice("uvs-gpuinfo-".length).toLowerCase();
+			const lbValue: string[] = JSON.parse(lbJValue);
+			resMap[lbName] = lbValue;
 		}
 	}
 	return resMap;
@@ -72,9 +87,6 @@ const allocateAutoGPU = async (
 	if (!result) {
 		return null;
 	}
-
-	const nodeResources = nodes.map(node => ({ node: node, resMap: countGpuResources(node.Spec.Labels) }));
-	console.log("ALLOCATE AUTO GPU: NODE RESOURCES: ", nodeResources);
 
 	const privResources: { [key: string]: number } = {};
 	for (const [svcName, svc] of Object.entries(result?.services ?? {})) {
@@ -100,24 +112,58 @@ const allocateAutoGPU = async (
 	}
 	console.log("ALLOCATE AUTO GPU: ", "privResources:", privResources);
 
-	// find first available node
+	// The GPU names are designed to be categorized by prefix
+	//   i.e. "gpu-nvidia-h200" would be one of "gpu-nvidia".
+	const privKeys = Object.keys(privResources).sort(
+		(a: string, b: string) => {
+			// For the topology to be right, we need to sort them.
+			// TLDR; sort by longer length, then by dictionary order.
+			if (a.length !== b.length) {
+				return -(a.length - b.length);
+			}
+			return Number(a > b) - Number(a < b);
+		}
+	);
+
+	// Simluate. Find first available node.
 	let foundNode = null;
-	for (const {node, resMap} of nodeResources) {
+	let foundDevices = null;
+	for (const node of nodes) {
 		let okay = true;
-		for (const [lbName, lbValue] of Object.entries(privResources)) {
-			if ((resMap[lbName] || 0) < lbValue) {
+
+		const gpuInfos = parseGpuInfo(node.Spec.Labels);
+		const selectorGpus = collectGpuTypeSet(node.Spec.Labels);
+		console.log("ALLOCATE AUTO GPU:", "gpuInfos:", gpuInfos);
+		console.log("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
+
+		const gpuAllocated = [];
+		for (const lbName of privKeys) {
+			const lbValue = privResources[lbName]!;
+			const gpuDevices = selectorGpus[lbName];
+			if ((gpuDevices?.size || 0) < lbValue) {
 				okay = false;
 				break;
+			}
+
+			for (let lbValCount = 0, gpuDeviceIter = gpuDevices!.values();
+				lbValCount < lbValue;
+				lbValCount++
+			) {
+				const gpuDevice = gpuDeviceIter.next().value!;
+				gpuDevices!.delete(gpuDevice);
+				gpuAllocated.push(gpuDevice);
 			}
 		}
 
 		if (okay) {
 			foundNode = node;
+			foundDevices = gpuAllocated;
 			break;
 		}
 	}
 
 	console.log("ALLOCATE AUTO GPU: Found node: ", foundNode);
+	console.log("ALLOCATE AUTO GPU: gpuAllocated: ", foundDevices);
 	return result;
 }
 
