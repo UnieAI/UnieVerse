@@ -7,6 +7,7 @@ import { DockerCpuChart } from "./docker-cpu-chart";
 import { DockerDiskChart } from "./docker-disk-chart";
 import { DockerMemoryChart } from "./docker-memory-chart";
 import { DockerNetworkChart } from "./docker-network-chart";
+import { DockerGpuChart } from './docker-gpu-chart';
 
 const defaultData = {
 	cpu: {
@@ -80,6 +81,19 @@ export interface DockerStats {
 
 		time: string;
 	};
+	gpu: {
+		value: {
+			utilization: {
+				gpu: number;
+				memory: number;
+			},
+			memory: {
+				free: number;
+				used: number;
+				total: number;
+			},
+		}
+	};
 }
 
 export type DockerStatsJSON = {
@@ -88,6 +102,7 @@ export type DockerStatsJSON = {
 	block: DockerStats["block"][];
 	network: DockerStats["network"][];
 	disk: DockerStats["disk"][];
+	gpu: DockerStats["gpu"][];
 };
 
 export const convertMemoryToBytes = (
@@ -130,6 +145,7 @@ export const ContainerFreeMonitoring = ({
 		block: [],
 		network: [],
 		disk: [],
+		gpu: [],
 	});
 	const [currentData, setCurrentData] = useState<DockerStats>(defaultData);
 
@@ -142,6 +158,7 @@ export const ContainerFreeMonitoring = ({
 			block: [],
 			network: [],
 			disk: [],
+			gpu: [],
 		});
 	}, [appName]);
 
@@ -154,6 +171,7 @@ export const ContainerFreeMonitoring = ({
 			block: data.block[data.block.length - 1] ?? currentData.block,
 			network: data.network[data.network.length - 1] ?? currentData.network,
 			disk: data.disk[data.disk.length - 1] ?? currentData.disk,
+			gpu: data.gpu[data.gpu.length - 1] ?? currentData.gpu,
 		});
 		setAcummulativeData({
 			block: data?.block || [],
@@ -161,6 +179,7 @@ export const ContainerFreeMonitoring = ({
 			disk: data?.disk || [],
 			memory: data?.memory || [],
 			network: data?.network || [],
+			gpu: data?.gpu || [],
 		});
 	}, [data]);
 
@@ -179,6 +198,7 @@ export const ContainerFreeMonitoring = ({
 				block: value.data.block ?? currentData.block,
 				disk: value.data.disk ?? currentData.disk,
 				network: value.data.network ?? currentData.network,
+				gpu: value.data.gpu ?? currentData.gpu,
 			};
 
 			setCurrentData(data);
@@ -189,6 +209,7 @@ export const ContainerFreeMonitoring = ({
 				block: [...prevData.block, data.block],
 				network: [...prevData.network, data.network],
 				disk: [...prevData.disk, data.disk],
+				gpu: [...prevData.gpu, data.gpu],
 			}));
 		};
 
@@ -211,6 +232,32 @@ export const ContainerFreeMonitoring = ({
 			</header>
 
 			<div className="grid gap-6 lg:grid-cols-2">
+				<Card className="bg-background">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">GPU Usage</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="flex flex-col gap-2 w-full">
+							<span className="text-sm text-muted-foreground">
+								{`GPU Utilization: ${(currentData?.gpu?.value?.utilization?.gpu || 0)}`}
+							</span>
+							<span className="text-sm text-muted-foreground">
+								{`Memory Usage: ${(currentData?.gpu?.value?.memory?.used || 0)} / ${(currentData?.gpu?.value?.memory?.total || 0)}`}
+							</span>
+							<Progress
+								value={
+									// @ts-ignore
+									(convertMemoryToBytes(currentData?.gpu?.value?.memory?.used || 0) /
+										// @ts-ignore
+										convertMemoryToBytes(currentData?.gpu?.value?.memory?.total || 0)) *
+									100
+								}
+								className="w-[100%]"
+							/>
+							<DockerGpuChart acummulativeData={acummulativeData.gpu} />
+						</div>
+					</CardContent>
+				</Card>
 				<Card className="bg-background">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">CPU Usage</CardTitle>

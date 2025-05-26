@@ -2,6 +2,18 @@ import { promises } from "node:fs";
 import osUtils from "node-os-utils";
 import { paths } from "../constants";
 
+export interface GpuStats {
+	utilization: {
+		gpu: number;
+		memory: number;
+	};
+	memory: {
+		free: number;
+		used: number;
+		total: number;
+	};
+	timestamp: string;
+}
 export interface Container {
 	BlockIO: string;
 	CPUPerc: string;
@@ -11,6 +23,7 @@ export interface Container {
 	MemUsage: string;
 	Name: string;
 	NetIO: string;
+	GPUs: GpuStats[];
 }
 export const recordAdvancedStats = async (
 	stats: Container,
@@ -18,6 +31,7 @@ export const recordAdvancedStats = async (
 ) => {
 	const { MONITORING_PATH } = paths();
 	const path = `${MONITORING_PATH}/${appName}`;
+	console.log(path, MONITORING_PATH)
 
 	await promises.mkdir(path, { recursive: true });
 
@@ -37,7 +51,13 @@ export const recordAdvancedStats = async (
 		outputMb: stats.NetIO.split(" ")[2],
 	});
 
-	if (appName === "dokploy") {
+	// TODO: Supports multiple GPUs
+	await updateStatsFile(appName, "gpu", {
+		utilization: stats?.GPUs[0]?.utilization,
+		memory: stats?.GPUs[0]?.memory,
+	});
+
+	if (appName === "dokploy") { // TODO: Update this to be more generic
 		const disk = await osUtils.drive.info("/");
 
 		const diskUsage = disk.usedGb;
@@ -61,12 +81,13 @@ export const getAdvancedStats = async (appName: string) => {
 		disk: await readStatsFile(appName, "disk"),
 		network: await readStatsFile(appName, "network"),
 		block: await readStatsFile(appName, "block"),
+		gpu: await readStatsFile(appName, "gpu"),
 	};
 };
 
 export const readStatsFile = async (
 	appName: string,
-	statType: "cpu" | "memory" | "disk" | "network" | "block",
+	statType: "cpu" | "memory" | "disk" | "network" | "block" | "gpu",
 ) => {
 	try {
 		const { MONITORING_PATH } = paths();
@@ -80,7 +101,7 @@ export const readStatsFile = async (
 
 export const updateStatsFile = async (
 	appName: string,
-	statType: "cpu" | "memory" | "disk" | "network" | "block",
+	statType: "cpu" | "memory" | "disk" | "network" | "block" | "gpu",
 	value: number | string | unknown,
 ) => {
 	const { MONITORING_PATH } = paths();
@@ -100,7 +121,7 @@ export const updateStatsFile = async (
 
 export const readLastValueStatsFile = async (
 	appName: string,
-	statType: "cpu" | "memory" | "disk" | "network" | "block",
+	statType: "cpu" | "memory" | "disk" | "network" | "block" | "gpu",
 ) => {
 	try {
 		const { MONITORING_PATH } = paths();
@@ -120,5 +141,6 @@ export const getLastAdvancedStatsFile = async (appName: string) => {
 		disk: await readLastValueStatsFile(appName, "disk"),
 		network: await readLastValueStatsFile(appName, "network"),
 		block: await readLastValueStatsFile(appName, "block"),
+		gpu: await readLastValueStatsFile(appName, "gpu"),
 	};
 };

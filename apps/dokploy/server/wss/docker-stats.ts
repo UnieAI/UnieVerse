@@ -74,11 +74,62 @@ export const setupDockerStatsMonitoringSocketServer = (
 				const { stdout, stderr } = await execAsync(
 					`docker stats ${container.Id} --no-stream --format \'{"BlockIO":"{{.BlockIO}}","CPUPerc":"{{.CPUPerc}}","Container":"{{.Container}}","ID":"{{.ID}}","MemPerc":"{{.MemPerc}}","MemUsage":"{{.MemUsage}}","Name":"{{.Name}}","NetIO":"{{.NetIO}}"}\'`,
 				);
+				const gpu_stats = await execAsync(
+					"nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,clocks.video,name,driver_version,pstate --format=csv,noheader",
+				)
+
+				const gpu_keys = [
+					'timestamp',          'utilization.gpu',
+					'utilization.memory', 'memory.total',
+					'memory.used',        'memory.free',
+					'temperature.gpu',    'fan.speed',
+					'power.draw',         'power.limit',
+					'clocks.gr',          'clocks.sm',
+					'clocks.mem',         'clocks.video',
+					'name',               'driver_version',
+					'pstate'
+				]
+
 				if (stderr) {
 					console.error("Docker stats error:", stderr);
 					return;
 				}
 				const stat = JSON.parse(stdout);
+
+				if(!gpu_stats.stderr && gpu_stats.stdout){
+					const gpus_status = gpu_stats.stdout
+						.trim()
+						.split("\n")
+						.filter(line => line.trim() !== "")
+						.map(line => {
+							// 1) isolate the timestamp (everything up to the first comma)
+							const firstComma = line.indexOf(",");
+							const timestamp = line.slice(0, firstComma).trim();
+							// 2) split and trim the remaining fields
+							const restValues = line
+							.slice(firstComma + 1)
+							.split(",")
+							.map(s => s.trim());
+							// 3) reassemble values array with timestamp in position 0
+							const values = [timestamp, ...restValues];
+
+							// 4) build the stat object
+							const stat = {};
+							gpu_keys.forEach((key, idx) => {
+								const parts = key.split(".");
+								let entry = stat;
+								// drill down for nested keys
+								for (let i = 0; i < parts.length - 1; i++) {
+									// @ts-ignore
+									entry = entry[parts[i]] = entry[parts[i]] || {};
+								}
+								// @ts-ignore
+								entry[parts[parts.length - 1]] = values[idx] || null;
+							});
+							return stat;
+						});
+					stat.GPUs = gpus_status;
+				}
 
 				await recordAdvancedStats(stat, appName);
 				const data = await getLastAdvancedStatsFile(appName);
