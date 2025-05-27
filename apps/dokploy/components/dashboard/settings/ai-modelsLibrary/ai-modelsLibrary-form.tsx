@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 
-export const AiModelsForm = () => {
+export const AiModelsLibraryForm = () => {
 
 
     return (

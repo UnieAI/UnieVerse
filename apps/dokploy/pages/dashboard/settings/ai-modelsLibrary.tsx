@@ -1,4 +1,4 @@
-import { AiModelsForm } from "@/components/dashboard/settings/ai-models/ai-models-form";
+import { AiModelsLibraryForm } from "@/components/dashboard/settings/ai-modelsLibrary/ai-modelsLibrary-form";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { appRouter } from "@/server/api/root";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
@@ -11,7 +11,7 @@ import superjson from "superjson";
 const Page = () => {
     return (
         <div className="relative flex h-[90vh] gap-4 w-full">
-            <AiModelsForm />
+            <AiModelsLibraryForm />
         </div>
     )
 }

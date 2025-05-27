@@ -233,7 +233,7 @@ function useMenu(): Menu {
 			{
 				title: "AI Models Library",
 				icon: LibraryBig,
-				url: "/dashboard/settings/ai-models",
+				url: "/dashboard/settings/ai-modelsLibrary",
 				isSingle: true,
 				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 			},
