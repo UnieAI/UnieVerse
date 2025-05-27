@@ -139,6 +139,7 @@ type ExternalLink = {
 // Consists of home, settings, and help items
 type Menu = {
 	home: NavItem[];
+	ai: NavItem[];
 	settings: NavItem[];
 	help: ExternalLink[];
 };
@@ -213,6 +214,37 @@ function useMenu(): Menu {
 					!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
 			},],
 
+		ai: [
+			{
+				title: "AI Model",
+				icon: BotIcon,
+				url: "/dashboard/settings/ai",
+				isSingle: true,
+				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+			},
+			{
+				title: "AI Model Token",
+				icon: KeyRound,
+				url: "/dashboard/settings/ai-api",
+				isSingle: true,
+				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+			},
+			{
+				title: "AI Models Library",
+				icon: BotIcon,
+				url: "/dashboard/settings/ai-models",
+				isSingle: true,
+				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+			},
+			{
+				title: "AI Playground",
+				icon: BotMessageSquare,
+				url: "/dashboard/settings/ai-playground",
+				isSingle: true,
+				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+			},
+		],
+
 		settings: [
 			{
 				isSingle: true,
@@ -252,27 +284,6 @@ function useMenu(): Menu {
 				// Only enabled for admins and users with access to SSH keys
 				isEnabled: ({ auth }) =>
 					!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
-			},
-			{
-				title: "AI Model",
-				icon: BotIcon,
-				url: "/dashboard/settings/ai",
-				isSingle: true,
-				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
-			},
-			{
-				title: "AI Model Token",
-				icon: KeyRound,
-				url: "/dashboard/settings/ai-api",
-				isSingle: true,
-				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
-			},
-			{
-				title: "AI Playground",
-				icon: BotMessageSquare,
-				url: "/dashboard/settings/ai-playground",
-				isSingle: true,
-				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 			},
 			{
 				isSingle: true,
@@ -627,6 +638,16 @@ function createMenuForAuthUser(opts: {
 		// Filter the home items based on the user's role and permissions
 		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
 		home: MENU.home.filter((item) =>
+			!item.isEnabled
+				? true
+				: item.isEnabled({
+					auth: opts.auth,
+					isCloud: opts.isCloud,
+				}),
+		),
+		// Filter the ai items based on the user's role and permissions
+		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
+		ai: MENU.ai.filter((item) =>
 			!item.isEnabled
 				? true
 				: item.isEnabled({
@@ -1005,12 +1026,13 @@ export default function Page({ children }: Props) {
 
 	const {
 		home: filteredHome,
+		ai: filteredAi,
 		settings: filteredSettings,
 		help,
 	} = createMenuForAuthUser({ auth, isCloud: !!isCloud });
 
 	const activeItem = findActiveNavItem(
-		[...filteredHome, ...filteredSettings],
+		[...filteredHome, ...filteredAi, ...filteredSettings],
 		pathname,
 	);
 
@@ -1048,6 +1070,95 @@ export default function Page({ children }: Props) {
 						<SidebarGroupLabel>Home</SidebarGroupLabel>
 						<SidebarMenu>
 							{filteredHome.map((item) => {
+								const isSingle = item.isSingle !== false;
+								const isActive = isSingle
+									? isActiveRoute({ itemUrl: item.url, pathname })
+									: item.items.some((item) =>
+										isActiveRoute({ itemUrl: item.url, pathname }),
+									);
+
+								return (
+									<Collapsible
+										key={item.title}
+										asChild
+										defaultOpen={isActive}
+										className="group/collapsible"
+									>
+										<SidebarMenuItem>
+											{isSingle ? (
+												<SidebarMenuButton
+													asChild
+													tooltip={item.title}
+													className={cn(isActive && "bg-border")}
+												>
+													<Link
+														href={item.url}
+														className="flex w-full items-center gap-2"
+													>
+														{item.icon && (
+															<item.icon
+																className={cn(isActive && "text-primary")}
+															/>
+														)}
+														<span>{item.title}</span>
+													</Link>
+												</SidebarMenuButton>
+											) : (
+												<>
+													<CollapsibleTrigger asChild>
+														<SidebarMenuButton
+															tooltip={item.title}
+															isActive={isActive}
+														>
+															{item.icon && <item.icon />}
+
+															<span>{item.title}</span>
+															{item.items?.length && (
+																<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+															)}
+														</SidebarMenuButton>
+													</CollapsibleTrigger>
+													<CollapsibleContent>
+														<SidebarMenuSub>
+															{item.items?.map((subItem) => (
+																<SidebarMenuSubItem key={subItem.title}>
+																	<SidebarMenuSubButton
+																		asChild
+																		className={cn(isActive && "bg-border")}
+																	>
+																		<Link
+																			href={subItem.url}
+																			className="flex w-full items-center"
+																		>
+																			{subItem.icon && (
+																				<span className="mr-2">
+																					<subItem.icon
+																						className={cn(
+																							"h-4 w-4 text-muted-foreground",
+																							isActive && "text-primary",
+																						)}
+																					/>
+																				</span>
+																			)}
+																			<span>{subItem.title}</span>
+																		</Link>
+																	</SidebarMenuSubButton>
+																</SidebarMenuSubItem>
+															))}
+														</SidebarMenuSub>
+													</CollapsibleContent>
+												</>
+											)}
+										</SidebarMenuItem>
+									</Collapsible>
+								);
+							})}
+						</SidebarMenu>
+					</SidebarGroup>
+					<SidebarGroup>
+						<SidebarGroupLabel>AI</SidebarGroupLabel>
+						<SidebarMenu className="gap-1">
+							{filteredAi.map((item) => {
 								const isSingle = item.isSingle !== false;
 								const isActive = isSingle
 									? isActiveRoute({ itemUrl: item.url, pathname })
