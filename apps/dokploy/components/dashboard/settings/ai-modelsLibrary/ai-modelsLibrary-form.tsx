@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -68,7 +67,7 @@ export const AiModelsLibraryForm = () => {
     }, [defaultToken]);
 
     return (
-        <div className="min-h-screen bg-white dark:bg-zinc-950 p-6">
+        <div className="h-full w-full p-6">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-8">AI Models Library</h1>
 
@@ -116,12 +115,11 @@ export const AiModelsLibraryForm = () => {
                                 {models.map((model, index) => (
                                     <Card key={index} className="bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 overflow-hidden">
                                         <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'}`}>
-                                            <div className={`relative ${viewMode === 'grid' ? 'h-48 w-full' : 'h-32 w-32'}`}>
-                                                <Image
+                                            <div className={`relative overflow-hidden ${viewMode === 'grid' ? 'h-48 w-full' : 'h-full w-48'}`}>
+                                                <img
                                                     src={model.img_src}
                                                     alt={model.name}
-                                                    fill
-                                                    className="object-cover"
+                                                    className={`${viewMode === 'grid' ? 'w-full h-auto' : 'h-full w-auto'}`}
                                                 />
                                             </div>
                                             <div className="p-4 flex-1">

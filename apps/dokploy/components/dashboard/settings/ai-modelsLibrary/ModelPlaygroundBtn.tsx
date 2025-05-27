@@ -26,7 +26,7 @@ export const ModelPlaygroundBtn: React.FC<ModelPlaygroundBtnProps> = ({
 
     const handleTryIt = (modelUrl_id: string) => {
         const _model: string = modelUrl_id;
-        const _tab: string = AI_PLAYGROUND_TAB_VALUE.TEST_API;
+        const _tab: string = AI_PLAYGROUND_TAB_VALUE.UNIEINFRA;
         const _api: string = UNIEINFRA_OPENAI_API_URL;
         const _token: string | null = defaultToken;
         router.push(`/dashboard/settings/ai-playground?model=${_model}&tab=${_tab}&token=${_token}&api=${_api}`);
