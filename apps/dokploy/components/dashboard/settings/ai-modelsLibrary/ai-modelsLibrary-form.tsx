@@ -69,7 +69,7 @@ export const AiModelsLibraryForm = () => {
     return (
         <div className="h-full w-full p-6">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8">AI Models Library</h1>
+                <h1 className="text-3xl font-bold mb-8">Model Zoo</h1>
 
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <div className="flex gap-2">
@@ -114,7 +114,7 @@ export const AiModelsLibraryForm = () => {
                             <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
                                 {models.map((model, index) => (
                                     <Card key={index} className="bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 overflow-hidden">
-                                        <div className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'}`}>
+                                        <div className={`flex ${viewMode === 'grid' ? 'flex-col  h-full' : 'flex-row'}`}>
                                             <div className={`relative overflow-hidden ${viewMode === 'grid' ? 'h-48 w-full' : 'h-full w-48'}`}>
                                                 <img
                                                     src={model.img_src}
@@ -122,40 +122,42 @@ export const AiModelsLibraryForm = () => {
                                                     className={`${viewMode === 'grid' ? 'w-full h-auto' : 'h-full w-auto'}`}
                                                 />
                                             </div>
-                                            <div className="p-4 flex-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div>
-                                                        <div className="flex flex-row gap-2 items-center ">
-                                                            <h3 className="font-medium text-lg hover:underline">
-                                                                <Link
-                                                                    href={`/models/service/${model.name}`} // 要更新
-                                                                >
-                                                                    {model.name}
-                                                                </Link>
-                                                            </h3>
+                                            <div className="p-4 flex flex-1 flex-col justify-between">
+                                                <>
+                                                    <div className="flex flex-row gap-2 items-center justify-between">
+                                                        <h3 className="font-medium text-lg hover:underline">
+                                                            {model.name}
+                                                            <p className="text-sm text-zinc-600 dark:text-zinc-400">{model.provider}</p>
+                                                        </h3>
+                                                        <div className="flex flex-col gap-2">
+                                                            <ModelPlaygroundBtn
+                                                                serviceModels={serviceModels}
+                                                                title="Try It"
+                                                                model={model} />
                                                             <Badge variant="secondary" className="bg-gray-200 dark:bg-zinc-800">
                                                                 {model.tokens}
                                                             </Badge>
                                                         </div>
-                                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">{model.provider}</p>
                                                     </div>
-                                                    <ModelPlaygroundBtn
-                                                        serviceModels={serviceModels}
-                                                        title="Try It"
-                                                        model={model} />
-                                                </div>
-                                                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">{model.description}</p>
-                                                <div className="mt-4 flex items-center gap-4 justify-between">
+
+                                                    <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">{model.description}</p>
+                                                </>
+                                                <div className="mt-4 flex gap-4 justify-between items-end">
                                                     <Badge
                                                         variant="outline"
                                                         className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-200 border-blue-200 dark:border-blue-800"
                                                     >
                                                         {model.marker}
                                                     </Badge>
-                                                    <span className="text-sm text-zinc-600 dark:text-zinc-400">{model.cost}</span>
+                                                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                                        {model.cost.split('\n').map((line, idx) => (
+                                                            <React.Fragment key={idx}>
+                                                                {line}
+                                                                <br />
+                                                            </React.Fragment>
+                                                        ))}
+                                                    </span>
                                                 </div>
-
-
                                             </div>
                                         </div>
                                     </Card>
