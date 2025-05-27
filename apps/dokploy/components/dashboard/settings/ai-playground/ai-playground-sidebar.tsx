@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider";
+import { Switch } from '@/components/ui/switch';
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
@@ -107,9 +108,19 @@ export const AiPlaygroundSidebar = ({
     const [isOpenModelParamsBtns, setIsOpenModelParamsBtns] = useState<boolean>(false);
     const [isOpenLLMOtherParamsBtns, setIsOpenLLMOtherParamsBtns] = useState<boolean>(false);
 
+    const [isAdvancedMode, setIsAdvancedMode] = useState<boolean>(false);
+
     useEffect(() => {
         if (isOpenOptions) setIsOpenModelParamsBtns(false);
     }, [isOpenOptions]);
+
+    useEffect(() => {
+        if (!isAdvancedMode) {
+            setTempParallelCount(1);
+            setParallelCount(1);
+            handleResetChatRoom(true);
+        }
+    }, [isAdvancedMode]);
 
     return (
         <AnimatePresence>
@@ -125,24 +136,34 @@ export const AiPlaygroundSidebar = ({
                     {/* Title */}
                     <div className="flex flex-row justify-between items-center gap-2">
                         <h3 className="flex text-lg font-semibold">API Options</h3>
-                        <select
-                            className="w-1/2 p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                            value={currentApiType}
-                            onChange={(e) => handleApiOptionsTabChange(e.target.value)}
-                            disabled={isLoading || isReplying}
-                        >
-                            <option value="" disabled>Select api type</option>
-                            {AI_PLAYGROUND_TAB_KEYS.map((_str: string, _idx) => (
-                                <option
-                                    key={_idx}
-                                    value={_str}
-                                    disabled={(_str === AI_PLAYGROUND_TAB_VALUE.AI)} // 暫不開放
-                                >
-                                    {(_str === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra API" : (_str === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === AI_PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
-                                </option>
-                            ))}
-                        </select>
+                        <Switch
+                            checked={isAdvancedMode}
+                            onCheckedChange={setIsAdvancedMode}
+                        />
                     </div>
+
+                    {isAdvancedMode && (
+                        <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
+                            <label className="text-sm">Tab</label>
+                            <select
+                                className="p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                value={currentApiType}
+                                onChange={(e) => handleApiOptionsTabChange(e.target.value)}
+                                disabled={isLoading || isReplying}
+                            >
+                                <option value="" disabled>Select api type</option>
+                                {AI_PLAYGROUND_TAB_KEYS.map((_str: string, _idx) => (
+                                    <option
+                                        key={_idx}
+                                        value={_str}
+                                        disabled={(_str === AI_PLAYGROUND_TAB_VALUE.AI)} // 暫不開放
+                                    >
+                                        {(_str === AI_PLAYGROUND_TAB_VALUE.UNIEINFRA) ? "UnieInfra API" : (_str === AI_PLAYGROUND_TAB_VALUE.THIRD_PARTY) ? "Third Party" : (_str === AI_PLAYGROUND_TAB_VALUE.TEST_API) ? "Test API" : _str}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* LLM api settings */}
                     <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
@@ -240,176 +261,195 @@ export const AiPlaygroundSidebar = ({
                     {(models.length > 0) ? (
                         <>
                             {/* chat room settings */}
-                            <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
+                            {isAdvancedMode ? (
+                                <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
 
-                                <div className='flex flex-row justify-between'>
-                                    <h3 className="text-lg font-semibold">Chat Room Settings</h3>
+                                    <div className='flex flex-row justify-between'>
+                                        <h3 className="text-lg font-semibold">Chat Room Settings</h3>
 
-                                    {!isOpenChatRoomSettingsBtns ? (
-                                        <Button
-                                            onClick={() => setIsOpenChatRoomSettingsBtns(true)}
-                                            className="px-2 py-1 text-sm bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white"
-                                        >
-                                            <ChevronDown className='w-3 h-3' />
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            onClick={() => setIsOpenChatRoomSettingsBtns(false)}
-                                            className="px-2 py-1 text-sm bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white"
-                                        >
-                                            <ChevronUp className='w-3 h-3' />
-                                        </Button>
-                                    )}
-                                </div>
+                                        {!isOpenChatRoomSettingsBtns ? (
+                                            <Button
+                                                onClick={() => setIsOpenChatRoomSettingsBtns(true)}
+                                                className="px-2 py-1 text-sm bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white"
+                                            >
+                                                <ChevronDown className='w-3 h-3' />
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                onClick={() => setIsOpenChatRoomSettingsBtns(false)}
+                                                className="px-2 py-1 text-sm bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white"
+                                            >
+                                                <ChevronUp className='w-3 h-3' />
+                                            </Button>
+                                        )}
+                                    </div>
 
-                                {isOpenChatRoomSettingsBtns && (
-                                    <>
-                                        {/* Parallel instances */}
-                                        <div className="space-y-2">
-                                            <label className="text-sm">Parallel Instances</label>
-                                            <div className="flex flex-row gap-2">
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    max={maxCount}
-                                                    value={tempParallelCount}
-                                                    onChange={(e) => setTempParallelCount(Number(e.target.value))}
-                                                    disabled={isLoading || isReplying}
-                                                    className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
-                                                />
-                                                <Button
-                                                    onClick={() => {
-                                                        setParallelCount(tempParallelCount);
-                                                        toast.success(`Parallel instances set to ${tempParallelCount}.`);
-                                                    }}
-                                                    className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                                    disabled={isLoading || isReplying || (parallelCount === tempParallelCount)}
-                                                >
-                                                    Set Parallel Instances
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Show thread btn */}
-                                        <div className="space-y-2">
-                                            <label className="text-sm">Show Threads</label>
-                                            <div className="grid grid-cols-5 gap-2">
-                                                {Array.from({ length: parallelCount }, (_, index) => (
+                                    {isOpenChatRoomSettingsBtns && (
+                                        <>
+                                            {/* Parallel instances */}
+                                            <div className="space-y-2">
+                                                <label className="text-sm">Parallel Instances</label>
+                                                <div className="flex flex-row gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        max={maxCount}
+                                                        value={tempParallelCount}
+                                                        onChange={(e) => setTempParallelCount(Number(e.target.value))}
+                                                        disabled={isLoading || isReplying}
+                                                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-950"
+                                                    />
                                                     <Button
-                                                        key={index}
                                                         onClick={() => {
-                                                            setSelectedIndexes(prev => {
-                                                                if (prev.includes(index)) {
-                                                                    return prev.filter(p => p !== index);
-                                                                } else {
-                                                                    if (prev.length >= maxSelectIndex) {
-                                                                        return [...prev.slice(1), index]; // 移除最早的
-                                                                    } else {
-                                                                        return [...prev, index];
-                                                                    }
-                                                                }
-                                                            });
+                                                            setParallelCount(tempParallelCount);
+                                                            toast.success(`Parallel instances set to ${tempParallelCount}.`);
                                                         }}
-                                                        className={`px-2 py-1 text-sm
+                                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                                        disabled={isLoading || isReplying || (parallelCount === tempParallelCount)}
+                                                    >
+                                                        Set Parallel Instances
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Show thread btn */}
+                                            <div className="space-y-2">
+                                                <label className="text-sm">Show Threads</label>
+                                                <div className="grid grid-cols-5 gap-2">
+                                                    {Array.from({ length: parallelCount }, (_, index) => (
+                                                        <Button
+                                                            key={index}
+                                                            onClick={() => {
+                                                                setSelectedIndexes(prev => {
+                                                                    if (prev.includes(index)) {
+                                                                        return prev.filter(p => p !== index);
+                                                                    } else {
+                                                                        if (prev.length >= maxSelectIndex) {
+                                                                            return [...prev.slice(1), index]; // 移除最早的
+                                                                        } else {
+                                                                            return [...prev, index];
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className={`px-2 py-1 text-sm
                                         bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
                                         ${selectedIndexes.includes(index) ? "border-4 border-zinc-500" : "border-2"}
                                         `}
-                                                    >
-                                                        #{index + 1}
-                                                    </Button>
-                                                ))}
+                                                        >
+                                                            #{index + 1}
+                                                        </Button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {/* Summary for each thread */}
-                                        {(parallelMessages.length > 0) && (
-                                            <div className="space-y-2 w-full">
-                                                <label className="text-sm">Threads Summary (Last Assistant Response)</label>
+                                            {/* Summary for each thread */}
+                                            {(parallelMessages.length > 0) && (
                                                 <div className="space-y-2 w-full">
-                                                    {parallelMessages.map((messages, index) => {
-                                                        const last = [...messages].reverse().find(msg => msg.role === 'assistant');
-                                                        return (
-                                                            <Button
-                                                                key={index}
-                                                                className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
+                                                    <label className="text-sm">Threads Summary (Last Assistant Response)</label>
+                                                    <div className="space-y-2 w-full">
+                                                        {parallelMessages.map((messages, index) => {
+                                                            const last = [...messages].reverse().find(msg => msg.role === 'assistant');
+                                                            return (
+                                                                <Button
+                                                                    key={index}
+                                                                    className={`flex flex-row justify-between border rounded-md w-full overflow-hidden
                                                 px-2 py-1 text-sm flex-1
                                                 bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
                                                 ${selectedIndexes.includes(index) ? "border-4" : "border-2"}
                                                 ${last?.state === "complete"
-                                                                        ? "border-green-400 dark:border-green-600"
-                                                                        : last?.state === "streaming"
-                                                                            ? "border-yellow-400 dark:border-yellow-600"
-                                                                            : last?.state === "error"
-                                                                                ? "border-red-400 dark:border-red-600"
-                                                                                : last?.state === "abort"
-                                                                                    ? "border-orange-400 dark:border-orange-600"
-                                                                                    : "border-zinc-400 dark:border-zinc-600"}`}
-                                                                onClick={() => {
-                                                                    setSelectedIndexes(prev => {
-                                                                        if (prev.includes(index)) {
-                                                                            return prev.filter(p => p !== index);
-                                                                        } else {
-                                                                            if (prev.length >= maxSelectIndex) {
-                                                                                return [...prev.slice(1), index]; // 移除最早的
+                                                                            ? "border-green-400 dark:border-green-600"
+                                                                            : last?.state === "streaming"
+                                                                                ? "border-yellow-400 dark:border-yellow-600"
+                                                                                : last?.state === "error"
+                                                                                    ? "border-red-400 dark:border-red-600"
+                                                                                    : last?.state === "abort"
+                                                                                        ? "border-orange-400 dark:border-orange-600"
+                                                                                        : "border-zinc-400 dark:border-zinc-600"}`}
+                                                                    onClick={() => {
+                                                                        setSelectedIndexes(prev => {
+                                                                            if (prev.includes(index)) {
+                                                                                return prev.filter(p => p !== index);
                                                                             } else {
-                                                                                return [...prev, index];
+                                                                                if (prev.length >= maxSelectIndex) {
+                                                                                    return [...prev.slice(1), index]; // 移除最早的
+                                                                                } else {
+                                                                                    return [...prev, index];
+                                                                                }
                                                                             }
-                                                                        }
-                                                                    });
-                                                                }}
-                                                            >
-                                                                <div className="flex flex-row gap-2">
-                                                                    <div className="text-sm">#{index + 1}</div>
-                                                                    <div className="text-sm">{
-                                                                        (() => {
-                                                                            const modelName = threadModels[index] || defaultModel;
-                                                                            return modelName.length > 10
-                                                                                ? modelName.slice(0, 10) + "..."
-                                                                                : modelName;
-                                                                        })()
-                                                                    }</div>
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    <div className="flex flex-row gap-2">
+                                                                        <div className="text-sm">#{index + 1}</div>
+                                                                        <div className="text-sm">{
+                                                                            (() => {
+                                                                                const modelName = threadModels[index] || defaultModel;
+                                                                                return modelName.length > 10
+                                                                                    ? modelName.slice(0, 10) + "..."
+                                                                                    : modelName;
+                                                                            })()
+                                                                        }</div>
 
-                                                                </div>
-                                                                {last && (
-                                                                    <>
-                                                                        {last.durationMs != null && (
-                                                                            <div>
-                                                                                <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
-                                                                                <span className="text-xs ml-1">chars/sec</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        );
-                                                    })}
+                                                                    </div>
+                                                                    {last && (
+                                                                        <>
+                                                                            {last.durationMs != null && (
+                                                                                <div>
+                                                                                    <span className="text-sm">{calculateCharsPerSecond(last.content, last.durationMs)}</span>
+                                                                                    <span className="text-xs ml-1">chars/sec</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Reset chat room btn */}
+                                            <div className="space-y-2">
+                                                <label className="text-sm">Reset Chat Room</label>
+                                                <div className="flex flex-col gap-2">
+                                                    <Button
+                                                        onClick={() => handleResetChatRoom(false)}
+                                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                                        disabled={isLoading || isReplying}
+                                                    >
+                                                        Reset Msg
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => handleResetChatRoom(true)}
+                                                        className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                                        disabled={isLoading || isReplying}
+                                                    >
+                                                        Reset Msg & Params
+                                                    </Button>
                                                 </div>
                                             </div>
-                                        )}
+                                        </>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
 
-                                        {/* Reset chat room btn */}
-                                        <div className="space-y-2">
-                                            <label className="text-sm">Reset Chat Room</label>
-                                            <div className="flex flex-row gap-2">
-                                                <Button
-                                                    onClick={() => handleResetChatRoom(false)}
-                                                    className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                                    disabled={isLoading || isReplying}
-                                                >
-                                                    Reset Msg
-                                                </Button>
-                                                <Button
-                                                    onClick={() => handleResetChatRoom(true)}
-                                                    className="w-full bg-blue-600 hover:bg-blue-800 text-white"
-                                                    disabled={isLoading || isReplying}
-                                                >
-                                                    Reset Msg & Params
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                                    <h3 className="text-lg font-semibold">Chat Room Settings</h3>
+
+                                    {/* Reset chat room btn */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm">Reset Chat Room</label>
+                                        <Button
+                                            onClick={() => handleResetChatRoom(false)}
+                                            className="w-full bg-blue-600 hover:bg-blue-800 text-white"
+                                            disabled={isLoading || isReplying}
+                                        >
+                                            Reset Msg
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* model params payload */}
                             <div className="flex flex-col border p-4 rounded-lg gap-2 break-words whitespace-pre-wrap">
@@ -417,7 +457,7 @@ export const AiPlaygroundSidebar = ({
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-semibold">Model Params Payload</h3>
 
-                                    {isDevelopment && (
+                                    {isAdvancedMode && (
                                         <>
                                             <div className="flex flex-row justify-between">
 
@@ -425,9 +465,9 @@ export const AiPlaygroundSidebar = ({
                                                     key={0}
                                                     onClick={() => setEditParams(0)}
                                                     className={`px-2 py-1 text-xs
-                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
-                                        ${(editParams === 0) ? "border-4 border-zinc-500" : "border-2"}
-                                        `}
+                                                        bg-transparent hover:bg-zinc-200 hover:dark:bg-zinc-600 text-black dark:text-white
+                                                        ${(editParams === 0) ? "border-4 border-zinc-500" : "border-2"}
+                                                        `}
                                                 >
                                                     <div className='break-words whitespace-pre-wrap'>default</div>
 
