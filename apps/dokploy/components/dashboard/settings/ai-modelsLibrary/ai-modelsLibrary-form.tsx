@@ -125,7 +125,7 @@ export const AiModelsLibraryForm = () => {
                                             <div className="p-4 flex flex-1 flex-col justify-between">
                                                 <>
                                                     <div className="flex flex-row gap-2 items-center justify-between">
-                                                        <h3 className="font-medium text-lg hover:underline">
+                                                        <h3 className="font-medium text-lg">
                                                             {model.name}
                                                             <p className="text-sm text-zinc-600 dark:text-zinc-400">{model.provider}</p>
                                                         </h3>
