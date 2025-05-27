@@ -60,7 +60,9 @@ export const AiModelsLibraryForm = () => {
 
             const datas2: ModelData_Payload[] = await fetchModelDatas();
             setModeDatalList(datas2);
-            console.log(`datas2: `, datas2);
+            console.log('datas2 type:', typeof datas2);
+            console.log('datas2 isArray:', Array.isArray(datas2));
+            console.log('datas2:', datas2);
         }
 
         if (defaultToken !== null) fetchData();
