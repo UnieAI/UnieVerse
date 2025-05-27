@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 import { WebSocketServer } from "ws";
 
 async function getDockerPids(container: string): Promise<{ [pid: string]: string }> {
+	console.log("呼叫 getDockerPids");
 	// const { stdout } = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
 	const dockerTopOutput = await execAsync('cat fake_docker_top.txt');
 	const lines = dockerTopOutput.stdout?.trim().split("\n") ?? [];
@@ -41,128 +42,107 @@ async function getDockerPids(container: string): Promise<{ [pid: string]: string
 	return pidCmdMap;
 }
 
-// 取得container對GPU的使用率
-const getContainerGpuUtilization = async (docker: Docker) => {
-	// 1. 各 GPU 使用率
-	const gpuUtilOutput = await execAsync(
-		"nvidia-smi --query-gpu=gpu_uuid,utilization.gpu --format=csv,noheader,nounits"
-	);
-	// 2. 各 process 使用 GPU 記憶體狀況
-	const gpuAppOutput = await execAsync(
-		"nvidia-smi --query-compute-apps=pid,gpu_uuid,used_gpu_memory --format=csv,noheader,nounits"
-	);
-	// 3. 取得 pmon 以判斷哪些 process 實際使用 GPU (SM or MEM > 0)
-	// const pmonOutput = await execAsync("nvidia-smi pmon -c 1");
+async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
+	// Step 1: 查詢 GPU 使用率
+	// const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
 	const pmonOutput = await execAsync('cat fake_pmon.txt');
+	const pmonLines = pmonOutput.stdout.trim().split('\n').filter(line => !line.startsWith('#'));
 
-	// STEP 1: Parse GPU utilization
-	const gpuUtilMap: { [uuid: string]: number } = {};
-	gpuUtilOutput.stdout.trim().split("\n").forEach(line => {
-		const [uuid, usageStr] = line.split(",").map(s => s.trim());
-		if (uuid && usageStr) {
-			gpuUtilMap[uuid] = Number(usageStr);
-		}
-	});
-
-	// STEP 2: Parse per-process GPU memory usage (pid ↔ uuid)
-	type ProcGpuEntry = { pid: string; uuid: string };
-	const procGpuMap: ProcGpuEntry[] = [];
-	for (const line of gpuAppOutput.stdout.trim().split("\n")) {
-		const [pid, uuid] = line.split(",").map(s => s.trim());
-		if (pid && uuid) {
-			procGpuMap.push({ pid, uuid });
-		}
-	}
-
-	// STEP 3: 解析 pmon，找出有使用 GPU 的 pid，並記錄 sm/mem
-	const activePids = new Set<string>();
-	const pidSmMem: { [pid: string]: { sm: number; mem: number } } = {};
-	const pmonLines = pmonOutput.stdout.trim().split("\n").filter(l => !l.startsWith("#"));
+	// 解析出 PID + SM/MEM 使用量
+	type GpuPidStats = Record<string, { gpu: number; sm: number; mem: number }>;
+	const gpuPidStats: GpuPidStats = {};
 	for (const line of pmonLines) {
 		const cols = line.trim().split(/\s+/);
-		// 格式: gpu, pid, type, sm, mem, enc, dec, jpg, ofa, command
-		if (cols.length < 10) continue;
-		const pid = cols[1];
-		const sm = Number(cols[3]);
-		const mem = Number(cols[4]);
-		if (pid && pid !== "-" && (sm > 0 || mem > 0)) {
-			activePids.add(pid);
-			pidSmMem[pid] = { sm, mem };
+		if (cols.length < 10) continue;		// Skip lines that don't have all 10 columns (incomplete or invalid format)
+		if (cols[0] !== undefined && cols[3] !== undefined && cols[4] !== undefined) {
+			const gpuId = parseInt(cols[0], 10);
+			const pid = cols[1];
+			const sm = parseInt(cols[3], 10);
+			const mem = parseInt(cols[4], 10);
+			if (
+				!isNaN(gpuId) &&
+				typeof pid === "string" &&
+				pid !== "-" &&
+				!isNaN(sm) &&
+				!isNaN(mem) &&
+				(sm > 0 || mem > 0)
+			) {
+				gpuPidStats[pid] = { gpu: gpuId, sm, mem };
+			}
 		}
 	}
 
-	// STEP 4:  pid → container name 映射
-	const containers = await docker.listContainers({ filters: JSON.stringify({ status: ["running"] }) });
-	const pidToContainer: { [pid: string]: string } = {};
+	// Step 3: 比對每個 container 的 PID
+	type GpuUsageMap = Record<number, {
+		containerUsageSm: Record<string, number>;
+		containerUsageMem: Record<string, number>;
+		totalSm: number;
+		totalMem: number;
+	}>;
+
+	const gpuUsageMap: GpuUsageMap = {};
+
 	for (const container of containers) {
-		const containerName = container.Names?.[0]?.replace(/^\//, "") || container.Id;
-		const pidCmdMap = await getDockerPids(container.Id);
-		for (const pid of Object.keys(pidCmdMap)) {
-			pidToContainer[pid] = containerName;
-		}
-	}
-	// const containers = await docker.listContainers({ filters: JSON.stringify({ status: ["running"] }) });
-	// const pidToContainer: { [pid: string]: string } = {};
-	// for (const container of containers) {
-	// 	const containerName = container.Names?.[0]?.replace(/^\//, "") || container.Id;
-	// 	const topInfo = await docker.getContainer(container.Id).top(); // 抓 container 內部所有 process
-	// 	const pidIndex = topInfo.Titles.indexOf("PID");
-	// 	if (pidIndex === -1) continue;
+		const containerId: string = container.Id;
+		const name: string = container.Names?.[0]?.replace(/^\//, '') || containerId;
 
-	// 	for (const proc of topInfo.Processes) {
-	// 		const pid = proc[pidIndex];
-	// 		if (pid) pidToContainer[pid] = containerName;
-	// 	}
-	// }
+		const pidCmdMap = await getDockerPids(containerId);
+		const pids: string[] = Object.keys(pidCmdMap);
 
-	// STEP 5: container → GPU UUID 映射 (containerId → [uuid1, uuid2, ...])
-	const containerGpuMap: { [container: string]: Set<string> } = {};
-	const containerSmMem: { [container: string]: { sm: number; mem: number } } = {};
-	for (const { pid, uuid } of procGpuMap) {
-		if (!activePids.has(pid)) continue; // 過濾掉沒在用 GPU 的 pid
-		const container = pidToContainer[pid];
-		if (typeof container !== "string") continue;
-		if (!containerGpuMap[container]) {
-			containerGpuMap[container] = new Set<string>();
-		}
-		containerGpuMap[container].add(uuid);
+		for (const pid of pids) {
+			const stat = gpuPidStats[pid];
+			if (!stat) continue;
 
-		if (!containerSmMem[container]) {
-			containerSmMem[container] = { sm: 0, mem: 0 };
-		}
-		const { sm, mem } = pidSmMem[pid] || { sm: 0, mem: 0 };
-		containerSmMem[container].sm += sm;
-		containerSmMem[container].mem += mem;
+			const { gpu, sm, mem } = stat;
+			if (!(gpu in gpuUsageMap)) {
+				gpuUsageMap[gpu] = {
+					containerUsageSm: {},
+					containerUsageMem: {},
+					totalSm: 0,
+					totalMem: 0,
+				};
+			}
+			const usageEntry = gpuUsageMap[gpu] ??= {
+				containerUsageSm: {},
+				containerUsageMem: {},
+				totalSm: 0,
+				totalMem: 0,
+			};
+
+			usageEntry.containerUsageSm[name] = (usageEntry.containerUsageSm[name] || 0) + sm;
+			usageEntry.containerUsageMem[name] = (usageEntry.containerUsageMem[name] || 0) + mem;
+
+			usageEntry.totalSm += sm;
+			usageEntry.totalMem += mem;
+		}	
 	}
 
-	// STEP 6: 計算每個 container 的 GPU 使用率總和
-	const result: {
-		[container: string]: {
-			totalSm: number;
-			totalMem: number;
-			gpuUtil: number;
-			gpuCount: number;
+	// 縮放至最大100%
+	for (const gpuStr in gpuUsageMap) {
+		const gpu = Number(gpuStr);
+		const usageEntry = gpuUsageMap[gpu] ??= {
+			containerUsageSm: {},
+			containerUsageMem: {},
+			totalSm: 0,
+			totalMem: 0,
 		};
-	} = {};
-	for (const [container, uuidSet] of Object.entries(containerGpuMap)) {
-		let totalUtil = 0;
-		for (const uuid of uuidSet) {
-			totalUtil += gpuUtilMap[uuid] || 0;
+		if (usageEntry.totalSm > 100) {
+			const scaleSm = 100 / usageEntry.totalSm;
+			for (const c in usageEntry.containerUsageSm) {
+			usageEntry.containerUsageSm[c] = Math.round((usageEntry.containerUsageSm[c] ?? 0) * scaleSm);
+			}
+			usageEntry.totalSm = 100;
 		}
-		const gpuCount = uuidSet.size;
-		result[container] = {
-			totalSm: containerSmMem[container]?.sm || 0,
-			totalMem: containerSmMem[container]?.mem || 0,
-			gpuUtil: totalUtil,
-			gpuCount,
-		};
+		if (usageEntry.totalMem > 100) {
+			const scaleMem = 100 / usageEntry.totalMem;
+			for (const c in usageEntry.containerUsageMem) {
+			usageEntry.containerUsageMem[c] = Math.round((usageEntry.containerUsageMem[c] ?? 0) * scaleMem);
+			}
+			usageEntry.totalMem = 100;
+		}
 	}
-	for (const [container, stats] of Object.entries(result)) {
-		console.log(`Container: ${container}, GPU Utilization Sum: ${stats.gpuUtil}, GPU Count: ${stats.gpuCount}`);
-	}
-
-	return result;
-};
+	return gpuUsageMap;
+}
 
 // 將 WebSocket server 掛載到 HTTP server 上
 export const setupDockerStatsMonitoringSocketServer = (
@@ -180,13 +160,17 @@ export const setupDockerStatsMonitoringSocketServer = (
 			return;
 		}
 		if (pathname === "/listen-docker-stats-monitoring") {
+			console.log("處理 WebSocket 升級...");
 			wssTerm.handleUpgrade(req, socket, head, function done(ws) {
+				console.log("WebSocket 連線完成，觸發 connection");
 				wssTerm.emit("connection", ws, req);
 			});
 		}
 	});
 
+	console.log("程式開始：connection");
 	wssTerm.on("connection", async (ws, req) => {
+		console.log("WebSocket 連線完成，觸發 connection");
 		const url = new URL(req.url || "", `http://${req.headers.host}`);
 		const appName = url.searchParams.get("appName");
 		const appType = (url.searchParams.get("appType") || "application") as
@@ -195,12 +179,16 @@ export const setupDockerStatsMonitoringSocketServer = (
 			| "docker-compose";
 		const { user, session } = await validateRequest(req);
 
+		console.log("接收到 appName:", appName);
 		if (!appName) {
+			console.log("未提供 appName，關閉連線");
 			ws.close(4000, "appName no provided");
 			return;
 		}
 
+		console.log("驗證結果：", user, session);
 		if (!user || !session) {
+			console.log("驗證失敗，關閉連線");
 			ws.close();
 			return;
 		}
@@ -218,24 +206,39 @@ export const setupDockerStatsMonitoringSocketServer = (
 						name: [appName],
 					}),
 				};
-
+				console.log("列出 container filter 條件:", JSON.stringify(filter));
 				const containers = await docker.listContainers({
 					filters: JSON.stringify(filter),
 				});
+				console.log("取得的 container 列表:", containers);
 
 				const container = containers[0];
-				if (!container || container?.State !== "running") {
+
+				if (!container) {
+					console.log("未找到 container，關閉連線");
+					ws.close(4000, "Container not found");
+					return;
+				}
+
+				if (container?.State !== "running") {
+					console.log("container 非 running 狀態，state:", container?.State);
 					ws.close(4000, "Container not running");
 					return;
 				}
+
+				// if (!container || container?.State !== "running") {
+				// 	ws.close(4000, "Container not running");
+				// 	return;
+				// }
 				const { stdout, stderr } = await execAsync(
 					`docker stats ${container.Id} --no-stream --format \'{"BlockIO":"{{.BlockIO}}","CPUPerc":"{{.CPUPerc}}","Container":"{{.Container}}","ID":"{{.ID}}","MemPerc":"{{.MemPerc}}","MemUsage":"{{.MemUsage}}","Name":"{{.Name}}","NetIO":"{{.NetIO}}"}\'`,
 				);
 				// 取出每張 GPU 的詳細狀態
+				console.log("取出每張 GPU 的詳細狀態");
 				const gpu_stats = await execAsync(
 					"nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,clocks.video,name,driver_version,pstate --format=csv,noheader",
 				)
-				console.log("多GPU原始nvidia-smi輸出:\n", gpu_stats.stdout);
+				console.log("多GPU原始nvidia-smi輸出:\n", JSON.stringify(gpu_stats.stdout?.split("\n"), null, 2));
 
 				const gpu_keys = [
 					'timestamp',          'utilization.gpu',
@@ -256,9 +259,9 @@ export const setupDockerStatsMonitoringSocketServer = (
 				const stat = JSON.parse(stdout);
 
 				// container GPU 使用率
-				const containerGpuUtilDetail = await getContainerGpuUtilization(docker);
+				const containerGpuUtilDetail = await getGpuUsingContainers(containers);
 				stat.GPUsUtilizationDetail = containerGpuUtilDetail;
-				console.log("containerGpuUtilDetail (每container的GPU利用率合計):", containerGpuUtilDetail);
+				console.log("containerGpuUtilDetail (每container的GPU利用率合計):", JSON.stringify(containerGpuUtilDetail, null, 2));
 
 				if(!gpu_stats.stderr && gpu_stats.stdout){
 					const gpus_status = gpu_stats.stdout
@@ -310,6 +313,7 @@ export const setupDockerStatsMonitoringSocketServer = (
 		}, 1300);
 
 		ws.on("close", () => {
+			console.log("WebSocket 關閉，清除 interval");
 			clearInterval(intervalId);
 		});
 	});
