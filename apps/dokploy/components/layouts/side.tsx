@@ -21,6 +21,7 @@ import {
 	GitBranch,
 	HeartIcon,
 	KeyRound,
+	LibraryBig,
 	Loader2,
 	type LucideIcon,
 	Package,
@@ -231,7 +232,7 @@ function useMenu(): Menu {
 			},
 			{
 				title: "AI Models Library",
-				icon: BotIcon,
+				icon: LibraryBig,
 				url: "/dashboard/settings/ai-models",
 				isSingle: true,
 				isEnabled: ({ auth }) => !!(auth?.role === "owner"),
