@@ -29,11 +29,11 @@ export const AiModelsLibraryForm = () => {
     const [modeDatalList, setModeDatalList] = useState<ModelData_Payload[]>([]);
 
     const filters: { value: Filter; label: string }[] = [
-        { value: 'all', label: 'all_models' },
-        { value: marker.Text, label: 'text_generation' },
-        { value: marker.Text2Image, label: 'text_to_image' },
-        { value: marker.TTS, label: 'speech_recognition' },
-        { value: marker.STT, label: 'speech_to_text' },
+        { value: 'all', label: 'All' },
+        { value: marker.Text, label: 'text generation' },
+        { value: marker.Text2Image, label: 'text to image' },
+        { value: marker.TTS, label: 'speech recognition' },
+        { value: marker.STT, label: 'speech to text' },
         { value: marker.Embedding, label: 'embeddings' },
         { value: marker.Custom, label: 'custom' },
     ];
