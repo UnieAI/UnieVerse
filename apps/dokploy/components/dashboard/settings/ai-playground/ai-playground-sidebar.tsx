@@ -17,7 +17,7 @@ import { isDevelopment, AI_PLAYGROUND_TAB_VALUE, AI_PLAYGROUND_TAB_KEYS } from "
 import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvider";
 import { api } from "@/utils/api";
 
-import { Message, ModelParams, _defaultModelParams } from ".";
+import { Message, ModelData, ModelParams, _defaultModelParams } from ".";
 import { calculateCharsPerSecond } from "./functions";
 
 interface AiPlaygroundSidebarProps {
@@ -33,8 +33,7 @@ interface AiPlaygroundSidebarProps {
     apiToken: string;
     setApiToken: React.Dispatch<React.SetStateAction<string>>;
     handleRefreshModels: () => void;
-    models: string[];
-    setModels: React.Dispatch<React.SetStateAction<string[]>>;
+    models: ModelData[];
     // chat rooms
     handleResetChatRoom: (resetModelParams: boolean) => void;
     maxCount: number;
@@ -73,7 +72,6 @@ export const AiPlaygroundSidebar = ({
     setApiToken,
     handleRefreshModels,
     models,
-    setModels,
     // chat rooms
     handleResetChatRoom,
     maxCount,
@@ -525,16 +523,40 @@ export const AiPlaygroundSidebar = ({
                                                         <span className="text-red-500">please set default model.</span>
                                                     )}
                                                 </label>
-                                                <select
+                                                {/* <select
                                                     className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                                                     value={defaultModel}
                                                     onChange={(e) => setDefaultModel(e.target.value)}
                                                 >
                                                     <option value="" disabled>Select a model</option>
-                                                    {models.map((id: string) => (
-                                                        <option key={id} value={id}>{id}</option>
+                                                    {models.map((model: ModelData) => (
+                                                        <option key={model.id} value={model.id}>{model.id}</option>
+                                                    ))}
+                                                </select> */}
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                                    value={defaultModel}
+                                                    onChange={(e) => setDefaultModel(e.target.value)}
+                                                >
+                                                    <option value="" disabled>
+                                                        Select a model
+                                                    </option>
+                                                    {Object.entries(
+                                                        models.reduce((groups, model) => {
+                                                            (groups[model.owned_by] ??= []).push(model);
+                                                            return groups;
+                                                        }, {} as Record<string, ModelData[]>)
+                                                    ).map(([owner, modelsGroup]) => (
+                                                        <optgroup key={owner} label={owner}>
+                                                            {modelsGroup.map((model) => (
+                                                                <option key={model.id} value={model.id}>
+                                                                    {model.id}
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
                                                     ))}
                                                 </select>
+
                                             </div>
                                         </>
                                     ) : (
@@ -544,7 +566,7 @@ export const AiPlaygroundSidebar = ({
                                                 <label className="text-sm">
                                                     <span>Select Chat Room {editParams} Model</span>
                                                 </label>
-                                                <select
+                                                {/* <select
                                                     className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
                                                     value={threadModels[editParams - 1]}
                                                     onChange={(e) => {
@@ -554,8 +576,35 @@ export const AiPlaygroundSidebar = ({
                                                     }}
                                                 >
                                                     <option value="" disabled>Select a model</option>
-                                                    {models.map((id: string) => (
-                                                        <option key={id} value={id}>{id}</option>
+                                                    {models.map((model: ModelData) => (
+                                                        <option key={model.id} value={model.id}>{model.id}</option>
+                                                    ))}
+                                                </select> */}
+                                                <select
+                                                    className="w-full p-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950"
+                                                    value={threadModels[editParams - 1]}
+                                                    onChange={(e) => {
+                                                        const newModels = [...threadModels];
+                                                        newModels[editParams - 1] = e.target.value;
+                                                        setThreadModels(newModels);
+                                                    }}
+                                                >
+                                                    <option value="" disabled>
+                                                        Select a model
+                                                    </option>
+                                                    {Object.entries(
+                                                        models.reduce((groups, model) => {
+                                                            (groups[model.owned_by] ??= []).push(model);
+                                                            return groups;
+                                                        }, {} as Record<string, ModelData[]>)
+                                                    ).map(([owner, modelsGroup]) => (
+                                                        <optgroup key={owner} label={owner}>
+                                                            {modelsGroup.map((model) => (
+                                                                <option key={model.id} value={model.id}>
+                                                                    {model.id}
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
                                                     ))}
                                                 </select>
                                             </div>

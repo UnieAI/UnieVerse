@@ -14,6 +14,13 @@ export interface Message {
     state?: "pending" | "streaming" | "complete" | "error" | "abort";
 };
 
+export interface ModelData {
+    created: number
+    id: string
+    object: string
+    owned_by: string
+};
+
 export interface ModelParams {
     temperature: number
     max_tokens: number

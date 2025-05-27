@@ -19,6 +19,7 @@ import { useUnieInfra } from "@/utils/unieai/unieinfra/provider/UnieInfraProvide
 
 import {
     Message,
+    ModelData,
     ModelParams,
     _defaultModelParams
 } from ".";
@@ -53,7 +54,7 @@ export const AiPlaygroundForm = () => {
 
     const [apiUrl, setApiUrl] = useState<string>("");
     const [apiToken, setApiToken] = useState<string>("");
-    const [models, setModels] = useState<string[]>([]);
+    const [models, setModels] = useState<ModelData[]>([]);
 
     // 預設 model
     const [defaultModel, setDefaultModel] = useState<string>("");
@@ -175,9 +176,8 @@ export const AiPlaygroundForm = () => {
                 throw new Error(`fetch models failed with status ${response.status}`);
             }
 
-            const modelIds: string[] = result.data.map((m: any) => m.id); // 提取 id
-            if (modelIds.length === 0) console.warn(`該 api 取得的模型列表為空`);
-            setModels(modelIds);
+            if (result.data.length === 0) console.warn(`該 api 取得的模型列表為空`);
+            setModels(result.data);
             toast.success("Models fetched successfully!");
         } catch (err: any) {
             setModels([]);
@@ -646,7 +646,7 @@ export const AiPlaygroundForm = () => {
             return newModelParams;
         });
 
-        if (!models.includes(defaultModel) && defaultModel !== "") {
+        if (!models.some(model => model.id === defaultModel) && defaultModel !== "") {
             if (isDevelopment) {
                 console.warn(`清除預設模型`);
                 console.warn(`models: `, models);
@@ -688,7 +688,7 @@ export const AiPlaygroundForm = () => {
 
                 // 清除不存在於 models 的值
                 for (let i = 0; i < updated.length; i++) {
-                    if (updated[i] && !models.includes(updated[i]!)) {
+                    if (updated[i] && !models.some(model => model.id === updated[i]!)) {
                         updated[i] = "";
                     }
                 }
@@ -885,7 +885,6 @@ export const AiPlaygroundForm = () => {
                 setApiToken={setApiToken}
                 handleRefreshModels={handleRefreshModels}
                 models={models}
-                setModels={setModels}
                 // chat rooms
                 handleResetChatRoom={handleResetChatRoom}
                 maxCount={maxCount}

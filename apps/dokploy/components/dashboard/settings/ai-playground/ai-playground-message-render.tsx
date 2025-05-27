@@ -12,6 +12,7 @@ import { AiPlaygroundMessageTimingDetail } from "./ai-playground-message-timing-
 
 import { Pencil, Trash2, Copy, Save, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { ModelData } from '.';
 import { copyImageLink, normalizeUrl } from "./functions";
 
 import {
@@ -28,7 +29,7 @@ interface AiPlaygroundMessageRenderProps {
     threadModels: any;
     setThreadModels: any;
     model: any;
-    models: any;
+    models: ModelData[];
     handleRegenerateMessage: any;
     isLoading: boolean;
     isReplying: boolean;
@@ -61,8 +62,8 @@ export const AiPlaygroundMessageRender = ({ thread, messages, setParallelMessage
                     className={`${isMobile ? "w-24" : "w-36"} p-0.5 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950`}
                 >
                     <option value="">(Default: {model || "none"})</option>
-                    {models.map((id: string) => (
-                        <option key={id} value={id}>{id}</option>
+                    {models.map((model: ModelData) => (
+                        <option key={model.id} value={model.id}>{model.id}</option>
                     ))}
                 </select>
             </div>
