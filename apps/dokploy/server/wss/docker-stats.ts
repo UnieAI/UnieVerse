@@ -7,13 +7,11 @@ import {
 	recordAdvancedStats,
 	validateRequest,
 } from "@dokploy/server";
-import { execSync } from 'child_process';
 import { WebSocketServer } from "ws";
 
 async function getDockerPids(container: string): Promise<{ [pid: string]: string }> {
-	console.log("呼叫 getDockerPids");
 	// const { stdout } = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
-	const dockerTopOutput = await execAsync('cat fake_docker_top.txt');
+	const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
 	const lines = dockerTopOutput.stdout?.trim().split("\n") ?? [];
 	if (lines.length < 2) return {};
 
@@ -45,7 +43,7 @@ async function getDockerPids(container: string): Promise<{ [pid: string]: string
 async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 	// Step 1: 查詢 GPU 使用率
 	// const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
-	const pmonOutput = await execAsync('cat fake_pmon.txt');
+	const pmonOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_pmon.txt');
 	const pmonLines = pmonOutput.stdout.trim().split('\n').filter(line => !line.startsWith('#'));
 
 	// 解析出 PID + SM/MEM 使用量
@@ -116,6 +114,7 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 			usageEntry.totalMem += mem;
 		}	
 	}
+	console.log("gpuUsageMap (before scale):", JSON.stringify(gpuUsageMap, null, 2));
 
 	// 縮放至最大100%
 	for (const gpuStr in gpuUsageMap) {
@@ -168,7 +167,6 @@ export const setupDockerStatsMonitoringSocketServer = (
 		}
 	});
 
-	console.log("程式開始：connection");
 	wssTerm.on("connection", async (ws, req) => {
 		console.log("WebSocket 連線完成，觸發 connection");
 		const url = new URL(req.url || "", `http://${req.headers.host}`);
@@ -179,14 +177,12 @@ export const setupDockerStatsMonitoringSocketServer = (
 			| "docker-compose";
 		const { user, session } = await validateRequest(req);
 
-		console.log("接收到 appName:", appName);
 		if (!appName) {
 			console.log("未提供 appName，關閉連線");
 			ws.close(4000, "appName no provided");
 			return;
 		}
 
-		console.log("驗證結果：", user, session);
 		if (!user || !session) {
 			console.log("驗證失敗，關閉連線");
 			ws.close();
@@ -206,11 +202,12 @@ export const setupDockerStatsMonitoringSocketServer = (
 						name: [appName],
 					}),
 				};
-				console.log("列出 container filter 條件:", JSON.stringify(filter));
-				const containers = await docker.listContainers({
-					filters: JSON.stringify(filter),
-				});
-				console.log("取得的 container 列表:", containers);
+				// console.log("列出 container filter 條件:", JSON.stringify(filter));
+				// const containers = await docker.listContainers({
+				// 	filters: JSON.stringify(filter),
+				// });
+				const containers = await docker.listContainers();
+				// console.log("取得的 container 列表:", containers);
 
 				const container = containers[0];
 
@@ -234,10 +231,10 @@ export const setupDockerStatsMonitoringSocketServer = (
 					`docker stats ${container.Id} --no-stream --format \'{"BlockIO":"{{.BlockIO}}","CPUPerc":"{{.CPUPerc}}","Container":"{{.Container}}","ID":"{{.ID}}","MemPerc":"{{.MemPerc}}","MemUsage":"{{.MemUsage}}","Name":"{{.Name}}","NetIO":"{{.NetIO}}"}\'`,
 				);
 				// 取出每張 GPU 的詳細狀態
-				console.log("取出每張 GPU 的詳細狀態");
-				const gpu_stats = await execAsync(
-					"nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,clocks.video,name,driver_version,pstate --format=csv,noheader",
-				)
+				// const gpu_stats = await execAsync(
+				// 	"nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,clocks.video,name,driver_version,pstate --format=csv,noheader",
+				// )
+				const gpu_stats = await execAsync("/home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_multi_gpu.sh");
 				console.log("多GPU原始nvidia-smi輸出:\n", JSON.stringify(gpu_stats.stdout?.split("\n"), null, 2));
 
 				const gpu_keys = [
@@ -306,9 +303,11 @@ export const setupDockerStatsMonitoringSocketServer = (
 						data,
 					}),
 				);
-			} catch (error) {
+			} catch (error: any) {
 				// @ts-ignore
-				ws.close(4000, `Error: ${error.message}`);
+				console.error("WebSocket 任務錯誤:", error);
+  				ws.close(4000, "Internal Error");
+				// ws.close(4000, `Error: ${error.message}`);
 			}
 		}, 1300);
 
