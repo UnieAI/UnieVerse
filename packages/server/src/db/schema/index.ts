@@ -1,3 +1,4 @@
+export * from "./allocation";
 export * from "./application";
 export * from "./postgres";
 export * from "./user";
