@@ -11,7 +11,7 @@ export const aiThirdParty = pgTable("ai_third_party", {
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
-	description: text("description").notNull(),
+	description: text("description"),
 	apiUrl: text("apiUrl").notNull(),
 	apiKey: text("apiKey").notNull(),
 	status: boolean("status").notNull().default(true),
@@ -32,7 +32,7 @@ export const aiThirdPartyRelations = relations(aiThirdParty, ({ one }) => ({
 
 const createSchema = createInsertSchema(aiThirdParty, {
 	name: z.string().min(1, { message: "Name is required" }),
-	description: z.string().min(1, { message: "Description is required" }),
+	description: z.string().optional(),
 	apiUrl: z.string().url({ message: "Please enter a valid URL" }),
 	apiKey: z.string().min(1, { message: "API Key is required" }),
 	status: z.boolean().optional(),
