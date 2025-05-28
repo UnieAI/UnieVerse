@@ -2,17 +2,17 @@ import { promises } from "node:fs";
 import osUtils from "node-os-utils";
 import { paths } from "../constants";
 
+export interface SingleGpuStat {
+	gpu: number;
+	utilization: number;
+	memory: number;
+}
 export interface GpuStats {
-	utilization: {
-		gpu: number;
+	gpus: SingleGpuStat[];
+	total: {
+		utilization: number;
 		memory: number;
 	};
-	memory: {
-		free: number;
-		used: number;
-		total: number;
-	};
-	timestamp: string;
 }
 export interface Container {
 	BlockIO: string;
@@ -23,7 +23,7 @@ export interface Container {
 	MemUsage: string;
 	Name: string;
 	NetIO: string;
-	GPUs: GpuStats[];
+	GPUs: Record<string, GpuStats>;
 }
 export const recordAdvancedStats = async (
 	stats: Container,
@@ -52,10 +52,13 @@ export const recordAdvancedStats = async (
 	});
 
 	// TODO: Supports multiple GPUs
-	await updateStatsFile(appName, "gpu", {
-		utilization: stats?.GPUs[0]?.utilization,
-		memory: stats?.GPUs[0]?.memory,
-	});
+	const gpuStatsForApp = stats?.GPUs?.[appName];
+	const gpuStats = {
+		utilization: gpuStatsForApp?.total?.utilization ?? 0,
+		memory: gpuStatsForApp?.total?.memory ?? 0,
+	};
+	// console.log(`[${appName}] GPU Stats:`, JSON.stringify(gpuStats, null, 2));
+	await updateStatsFile(appName, "gpu", gpuStats);
 
 	if (appName === "dokploy") { // TODO: Update this to be more generic
 		const disk = await osUtils.drive.info("/");

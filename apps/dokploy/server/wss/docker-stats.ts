@@ -71,50 +71,47 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 	}
 
 	// Step 3: 比對每個 container 的 PID
-	type GpuUsageMap = Record<number, {
-		containerUsageSm: Record<string, number>;
-		containerUsageMem: Record<string, number>;
-		totalSm: number;
-		totalMem: number;
-	}>;
-
-	const gpuUsageMap: GpuUsageMap = {};
+	const result: Record<string, {
+		gpus: { gpu: number; utilization: number; memory: number }[];
+		total: { utilization: number; memory: number };
+	}> = {};
 
 	for (const container of containers) {
 		const containerId: string = container.Id;
 		const name: string = container.Names?.[0]?.replace(/^\//, '') || containerId;
-
 		const pidCmdMap = await getDockerPids(containerId);
 		const pids: string[] = Object.keys(pidCmdMap);
+
+		const gpuMap: Record<number, { utilization: number; memory: number }> = {};
 
 		for (const pid of pids) {
 			const stat = gpuPidStats[pid];
 			if (!stat) continue;
 
 			const { gpu, sm, mem } = stat;
-			if (!(gpu in gpuUsageMap)) {
-				gpuUsageMap[gpu] = {
-					containerUsageSm: {},
-					containerUsageMem: {},
-					totalSm: 0,
-					totalMem: 0,
-				};
+			if (!(gpu in gpuMap)) {
+				gpuMap[gpu] = { utilization: 0, memory: 0 };
 			}
-			const usageEntry = gpuUsageMap[gpu] ??= {
-				containerUsageSm: {},
-				containerUsageMem: {},
-				totalSm: 0,
-				totalMem: 0,
-			};
+			gpuMap[gpu] ??= { utilization: 0, memory: 0 };
+			gpuMap[gpu].utilization += sm;
+			gpuMap[gpu].memory += mem;
+		}
 
-			usageEntry.containerUsageSm[name] = (usageEntry.containerUsageSm[name] || 0) + sm;
-			usageEntry.containerUsageMem[name] = (usageEntry.containerUsageMem[name] || 0) + mem;
+		const gpuArray = Object.entries(gpuMap).map(([gpu, val]) => ({
+			gpu: Number(gpu),
+			utilization: val.utilization,
+			memory: val.memory,
+		}));
 
-			usageEntry.totalSm += sm;
-			usageEntry.totalMem += mem;
-		}	
+		const total = gpuArray.reduce((acc, g) => {
+			acc.utilization += g.utilization;
+			acc.memory += g.memory;
+			return acc;
+		}, { utilization: 0, memory: 0 });
+
+		result[name] = { gpus: gpuArray, total };
 	}
-	return gpuUsageMap;
+	return result;
 }
 
 // 將 WebSocket server 掛載到 HTTP server 上
@@ -197,31 +194,9 @@ export const setupDockerStatsMonitoringSocketServer = (
 					return;
 				}
 
-				// if (!container || container?.State !== "running") {
-				// 	ws.close(4000, "Container not running");
-				// 	return;
-				// }
 				const { stdout, stderr } = await execAsync(
 					`docker stats ${container.Id} --no-stream --format \'{"BlockIO":"{{.BlockIO}}","CPUPerc":"{{.CPUPerc}}","Container":"{{.Container}}","ID":"{{.ID}}","MemPerc":"{{.MemPerc}}","MemUsage":"{{.MemUsage}}","Name":"{{.Name}}","NetIO":"{{.NetIO}}"}\'`,
 				);
-				// 取出每張 GPU 的詳細狀態
-				// const gpu_stats = await execAsync(
-				// 	"nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw,power.limit,clocks.gr,clocks.sm,clocks.mem,clocks.video,name,driver_version,pstate --format=csv,noheader",
-				// )
-				const gpu_stats = await execAsync("/home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_multi_gpu.sh");
-				console.log("多GPU原始nvidia-smi輸出:\n", JSON.stringify(gpu_stats.stdout?.split("\n"), null, 2));
-
-				const gpu_keys = [
-					'timestamp',          'utilization.gpu',
-					'utilization.memory', 'memory.total',
-					'memory.used',        'memory.free',
-					'temperature.gpu',    'fan.speed',
-					'power.draw',         'power.limit',
-					'clocks.gr',          'clocks.sm',
-					'clocks.mem',         'clocks.video',
-					'name',               'driver_version',
-					'pstate'
-				]
 
 				if (stderr) {
 					console.error("Docker stats error:", stderr);
@@ -231,44 +206,11 @@ export const setupDockerStatsMonitoringSocketServer = (
 
 				// container GPU 使用率
 				const containerGpuUtilDetail = await getGpuUsingContainers(containers);
-				stat.GPUsUtilizationDetail = containerGpuUtilDetail;
-				console.log("containerGpuUtilDetail (每container的GPU利用率合計):", JSON.stringify(containerGpuUtilDetail, null, 2));
-
-				if(!gpu_stats.stderr && gpu_stats.stdout){
-					const gpus_status = gpu_stats.stdout
-						.trim()
-						.split("\n")
-						.filter(line => line.trim() !== "")
-						.map(line => {
-							// 1) isolate the timestamp (everything up to the first comma)
-							const firstComma = line.indexOf(",");
-							const timestamp = line.slice(0, firstComma).trim();
-							// 2) split and trim the remaining fields
-							const restValues = line
-							.slice(firstComma + 1)
-							.split(",")
-							.map(s => s.trim());
-							// 3) reassemble values array with timestamp in position 0
-							const values = [timestamp, ...restValues];
-
-							// 4) build the stat object
-							const stat = {};
-							gpu_keys.forEach((key, idx) => {
-								const parts = key.split(".");
-								let entry = stat;
-								// drill down for nested keys
-								for (let i = 0; i < parts.length - 1; i++) {
-									// @ts-ignore
-									entry = entry[parts[i]] = entry[parts[i]] || {};
-								}
-								// @ts-ignore
-								entry[parts[parts.length - 1]] = values[idx] || null;
-							});
-							return stat;
-						});
-					stat.GPUs = gpus_status;
-				}
-
+				// console.log("containerGpuUtilDetail (每container的GPU利用率合計):", JSON.stringify(containerGpuUtilDetail, null, 2));
+				// TODO: We may need to remove some useless stuff
+				stat.GPUs = containerGpuUtilDetail
+				// console.log("stat.GPUs: ", JSON.stringify(stat.GPUs, null, 2));
+				// console.log("appName: ", appName);
 				await recordAdvancedStats(stat, appName);
 				const data = await getLastAdvancedStatsFile(appName);
 
