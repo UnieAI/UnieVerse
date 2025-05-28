@@ -39,6 +39,10 @@ const defaultData = {
 		value: { diskTotal: 0, diskUsage: 0, diskUsedPercentage: 0, diskFree: 0 },
 		time: "",
 	},
+	gpu: {
+		value: { utilization: 0, memory: 0, gpunum: 0},
+		time: "",
+	}
 };
 
 interface Props {
@@ -83,16 +87,11 @@ export interface DockerStats {
 	};
 	gpu: {
 		value: {
-			utilization: {
-				gpu: number;
-				memory: number;
-			},
-			memory: {
-				free: number;
-				used: number;
-				total: number;
-			},
-		}
+			utilization: number,
+			memory: number,
+			gpunum: number,
+		};
+		time: string;
 	};
 }
 
@@ -239,10 +238,11 @@ export const ContainerFreeMonitoring = ({
 					<CardContent>
 						<div className="flex flex-col gap-2 w-full">
 							<span className="text-sm text-muted-foreground">
-								{`GPU Utilization: ${(currentData?.gpu?.value?.utilization?.gpu || 0)}`}
+								{`GPU Utilization: ${(currentData?.gpu?.value?.utilization || 0)} % / ${(currentData?.gpu?.value?.gpunum * 100 || 100)} %`}
 							</span>
 							<span className="text-sm text-muted-foreground">
-								{`Memory Usage: ${(currentData?.gpu?.value?.memory?.used || 0)} / ${(currentData?.gpu?.value?.memory?.total || 0)}`}
+								{/* {`Memory Usage: ${(currentData?.gpu?.value?.memory?.used || 0)} / ${(currentData?.gpu?.value?.memory?.total || 0)}`} */}
+								{`Memory Usage: ${(currentData?.gpu?.value?.memory || 0)}`}
 							</span>
 							<Progress
 								value={

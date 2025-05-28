@@ -10,17 +10,22 @@ import {
 } from "recharts";
 import type { DockerStatsJSON } from "./show-free-container-monitoring";
 import { convertMemoryToBytes } from "./show-free-container-monitoring";
+import { Item } from "@radix-ui/react-dropdown-menu";
 
 interface Props {
 	acummulativeData: DockerStatsJSON["gpu"];
 }
 
 export const DockerGpuChart = ({ acummulativeData }: Props) => {
+	const gpunum = Math.max(
+		...acummulativeData.map((item) => item.value.gpunum ?? 1)
+	);
 	const transformedData = acummulativeData.map((item, index) => {
 		return {
 			name: `Point ${index + 1}`,
 			time: item.time,
-			usage: item.value.utilization.gpu.toString().split("%")[0],
+			usage: item.value.utilization,
+			gpunum: item.value.gpunum ?? 1,
 		};
 	});
 	return (
@@ -41,7 +46,7 @@ export const DockerGpuChart = ({ acummulativeData }: Props) => {
 							<stop offset="95%" stopColor="white" stopOpacity={0} />
 						</linearGradient>
 					</defs>
-					<YAxis stroke="#A1A1AA" domain={[0, 100]} />
+					<YAxis stroke="#A1A1AA" domain={[0, 100 * gpunum]} />
 					<CartesianGrid strokeDasharray="3 3" stroke="#27272A" />
 					{/* @ts-ignore */}
 					<Tooltip content={<CustomTooltip />} />
@@ -68,6 +73,7 @@ interface CustomTooltipProps {
 		payload: {
 			time: string;
 			usage: number;
+			gpunum: number;
 		};
 	}[];
 }
@@ -81,7 +87,7 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 					<p>{`Date: ${format(new Date(payload[0].payload.time), "PPpp")}`}</p>
 				)}
 
-				<p>{`Utilization: ${payload[0].payload.usage}%`}</p>
+				<p>{`Utilization: ${payload[0].payload.usage}% (of ${payload[0].payload.gpunum * 100}%)`}</p>
 			</div>
 		);
 	}

@@ -178,7 +178,6 @@ export const setupDockerStatsMonitoringSocketServer = (
 				// 	filters: JSON.stringify(filter),
 				// });
 				const containers = await docker.listContainers();
-				// console.log("取得的 container 列表:", containers);
 
 				const container = containers[0];
 
@@ -206,11 +205,8 @@ export const setupDockerStatsMonitoringSocketServer = (
 
 				// container GPU 使用率
 				const containerGpuUtilDetail = await getGpuUsingContainers(containers);
-				// console.log("containerGpuUtilDetail (每container的GPU利用率合計):", JSON.stringify(containerGpuUtilDetail, null, 2));
 				// TODO: We may need to remove some useless stuff
 				stat.GPUs = containerGpuUtilDetail
-				// console.log("stat.GPUs: ", JSON.stringify(stat.GPUs, null, 2));
-				// console.log("appName: ", appName);
 				await recordAdvancedStats(stat, appName);
 				const data = await getLastAdvancedStatsFile(appName);
 
