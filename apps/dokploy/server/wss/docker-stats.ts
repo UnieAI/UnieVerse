@@ -114,32 +114,6 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 			usageEntry.totalMem += mem;
 		}	
 	}
-	console.log("gpuUsageMap (before scale):", JSON.stringify(gpuUsageMap, null, 2));
-
-	// 縮放至最大100%
-	for (const gpuStr in gpuUsageMap) {
-		const gpu = Number(gpuStr);
-		const usageEntry = gpuUsageMap[gpu] ??= {
-			containerUsageSm: {},
-			containerUsageMem: {},
-			totalSm: 0,
-			totalMem: 0,
-		};
-		if (usageEntry.totalSm > 100) {
-			const scaleSm = 100 / usageEntry.totalSm;
-			for (const c in usageEntry.containerUsageSm) {
-			usageEntry.containerUsageSm[c] = Math.round((usageEntry.containerUsageSm[c] ?? 0) * scaleSm);
-			}
-			usageEntry.totalSm = 100;
-		}
-		if (usageEntry.totalMem > 100) {
-			const scaleMem = 100 / usageEntry.totalMem;
-			for (const c in usageEntry.containerUsageMem) {
-			usageEntry.containerUsageMem[c] = Math.round((usageEntry.containerUsageMem[c] ?? 0) * scaleMem);
-			}
-			usageEntry.totalMem = 100;
-		}
-	}
 	return gpuUsageMap;
 }
 
