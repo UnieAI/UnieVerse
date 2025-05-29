@@ -10,7 +10,7 @@ import {
 import { WebSocketServer } from "ws";
 
 async function getDockerPids(container: string): Promise<{ [pid: string]: string }> {
-	const { stdout } = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
+	const dockerTopOutput = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
 	// const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
 	const lines = dockerTopOutput.stdout?.trim().split("\n") ?? [];
 	if (lines.length < 2) return {};
