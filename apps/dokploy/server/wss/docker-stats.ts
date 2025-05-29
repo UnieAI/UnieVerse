@@ -10,8 +10,8 @@ import {
 import { WebSocketServer } from "ws";
 
 async function getDockerPids(container: string): Promise<{ [pid: string]: string }> {
-	// const dockerTopOutput = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
-	const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
+	const dockerTopOutput = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
+	// const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
 	const lines = dockerTopOutput.stdout?.trim().split("\n") ?? [];
 	if (lines.length < 2) return {};
 
@@ -43,16 +43,16 @@ async function getDockerPids(container: string): Promise<{ [pid: string]: string
 async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 	// Step 0: 查詢 GPU 總記憶體 (MiB)
 	const getGpuTotalMemory = async (): Promise<number[]> => {
-		// const { stdout } = await execAsync(
-		// 	'nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits'
-		// );
-		const { stdout } = await execAsync('bash /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_multi_gpu.sh');
+		const { stdout } = await execAsync(
+			'nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits'
+		);
+		// const { stdout } = await execAsync('bash /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_multi_gpu.sh');
 		return stdout.trim().split('\n').map(val => parseInt(val.trim(), 10));
 	};
 	const totalMemoryList = await getGpuTotalMemory();
 	// Step 1: 查詢 GPU 使用率
-	// const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
-	const pmonOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_pmon.txt');
+	const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
+	// const pmonOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_pmon.txt');
 	const pmonLines = pmonOutput.stdout.trim().split('\n').filter(line => !line.startsWith('#'));
 
 	// 解析出 PID + SM/MEM 使用量
