@@ -100,13 +100,13 @@ export type Services = {
 	serverId?: string | null;
 	name: string;
 	type:
-		| "mariadb"
-		| "application"
-		| "postgres"
-		| "mysql"
-		| "mongo"
-		| "redis"
-		| "compose";
+	| "mariadb"
+	| "application"
+	| "postgres"
+	| "mysql"
+	| "mongo"
+	| "redis"
+	| "compose";
 	description?: string | null;
 	id: string;
 	createdAt: string;
@@ -588,6 +588,7 @@ const Project = (
 
 	const filteredServices = useMemo(() => {
 		if (!applications) return [];
+		// console.warn("applications: ", applications);
 		const filtered = applications.filter(
 			(service) =>
 				(service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -679,9 +680,9 @@ const Project = (
 													className={cn(
 														"data-[state=checked]:bg-primary",
 														selectedServices.length > 0 &&
-															selectedServices.length <
-																filteredServices.length &&
-															"bg-primary/50",
+														selectedServices.length <
+														filteredServices.length &&
+														"bg-primary/50",
 													)}
 													onCheckedChange={handleSelectAll}
 												/>
@@ -738,28 +739,28 @@ const Project = (
 													</DialogAction>
 													{(auth?.role === "owner" ||
 														auth?.canDeleteServices) && (
-														<>
-															<DialogAction
-																title="Delete Services"
-																description={`Are you sure you want to delete ${selectedServices.length} services? This action cannot be undone.`}
-																type="destructive"
-																onClick={handleBulkDelete}
-															>
-																<Button
-																	variant="ghost"
-																	className="w-full justify-start text-destructive"
+															<>
+																<DialogAction
+																	title="Delete Services"
+																	description={`Are you sure you want to delete ${selectedServices.length} services? This action cannot be undone.`}
+																	type="destructive"
+																	onClick={handleBulkDelete}
 																>
-																	<Trash2 className="mr-2 h-4 w-4" />
-																	Delete
-																</Button>
-															</DialogAction>
-															<DuplicateProject
-																projectId={projectId}
-																services={applications}
-																selectedServiceIds={selectedServices}
-															/>
-														</>
-													)}
+																	<Button
+																		variant="ghost"
+																		className="w-full justify-start text-destructive"
+																	>
+																		<Trash2 className="mr-2 h-4 w-4" />
+																		Delete
+																	</Button>
+																</DialogAction>
+																<DuplicateProject
+																	projectId={projectId}
+																	services={applications}
+																	selectedServiceIds={selectedServices}
+																/>
+															</>
+														)}
 
 													<Dialog
 														open={isMoveDialogOpen}

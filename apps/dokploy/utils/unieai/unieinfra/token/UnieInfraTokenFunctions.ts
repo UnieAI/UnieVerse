@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import { isDevelopment } from "@/utils/unieai/unieinfra/key";
+import { isDevelopment, AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME } from "@/utils/unieai/unieinfra/key";
 
 export interface UnieInfraTokenPayload {
     accessed_time?: number,
@@ -26,7 +26,28 @@ export interface UnieInfraTokenStatusPayload {
 export const Success: string = "success";
 export const Error: string = "failed";
 
-export const ListUnieInfraTokens = async (accessToken: string) => {
+export const CreateDefaultToken = async (accessToken: string): Promise<string> => {
+    const payload: UnieInfraTokenPayload = {
+        expired_time: -1,
+        group: "",
+        name: AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME,
+        remain_quota: 0,
+        unlimited_quota: true,
+    }
+    const postRes = await PostUnieInfraToken(accessToken, payload);
+    if (postRes === Success) {
+        const _tokens = await ListUnieInfraTokens(accessToken);
+
+        const matchedTokens: any[] = _tokens.filter(
+            (token: any) => token.name === AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME
+        );
+
+        if (matchedTokens.length > 0) return matchedTokens[0].key;
+        else return Error;
+    } else return Error;
+}
+
+export const ListUnieInfraTokens = async (accessToken: string): Promise<UnieInfraTokenPayload[]> => {
     try {
         if (isDevelopment) console.log(`try to get tokens: \r\naccessToken:\r\nBearer ${accessToken}`);
 

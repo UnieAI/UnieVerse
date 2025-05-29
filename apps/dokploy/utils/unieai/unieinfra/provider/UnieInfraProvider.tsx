@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
+import { AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME } from '../key';
 import { UnieInfraTokenPayload, UnieInfraTokenStatusPayload } from "../token/UnieInfraTokenFunctions";
 
 import { useUnieInfraAccessToken } from '../user/use-unieInfraAccessToken';
@@ -11,10 +12,12 @@ import { useUnieInfraGroups } from '../group/use-unieInfraGroups';
 interface UnieInfraContextValue {
     // link
     accessToken: string | null;
-    isConnecting: boolean;
     LinkUnieInfra: (user: any) => Promise<void>;
+    isConnecting: boolean;
     // token
     tokens: UnieInfraTokenPayload[];
+    defaultToken: string | null;
+    fetchDefaultToken: (accessToken: string, reCreateToken: boolean) => Promise<string>;
     getTokens: (accessToken: string) => Promise<void>;
     postToken: (accessToken: string, payload: UnieInfraTokenPayload) => Promise<string>;
     putToken: (accessToken: string, payload: UnieInfraTokenPayload) => Promise<string>;
@@ -32,20 +35,31 @@ const UnieInfraContext = createContext<UnieInfraContextValue | undefined>(undefi
 export const UnieInfraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     const { accessToken, LinkUnieInfra, isLoading: isConnecting } = useUnieInfraAccessToken();
-    const { tokens, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: isLoadingTokens } = useUnieInfraTokens();
+    const { tokens, defaultToken, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoading: isLoadingTokens } = useUnieInfraTokens();
     const { groups, getGroups, isLoading: isLoadingGroups } = useUnieInfraGroups();
 
+    // accessToken 更新時 自動更新 tokens, defaultToken, groups
     useEffect(() => {
+        const fetchUnieInfraDefaultToken = async (accessToken: string) => {
+            await fetchDefaultToken(accessToken, false); // 不強制重建新 default token
+        };
+
         if (accessToken) {
-            getTokens(accessToken);
+            // 確認是否包含 AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME
+            const matchedToken = tokens.find(token =>
+                token.name && token.name.includes(AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME)
+            );
+
+            if (!matchedToken) fetchUnieInfraDefaultToken(accessToken);
+
             getGroups(accessToken);
         }
     }, [accessToken]);
 
     return (
         <UnieInfraContext.Provider value={{
-            accessToken, isConnecting, LinkUnieInfra,
-            tokens, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoadingTokens,
+            accessToken, LinkUnieInfra, isConnecting,
+            tokens, defaultToken, fetchDefaultToken, getTokens, postToken, putToken, putTokenStatus, deleteToken, isLoadingTokens,
             groups, getGroups, isLoadingGroups
         }}>
             {children}

@@ -1,4 +1,3 @@
-// /pages/api/fetch-models.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	const { base_url, api_key } = req.body;
 
 	if (!base_url) {
-		return res.status(400).json({ message: "Missing base_url or api_key" });
+		return res.status(400).json({ message: "Missing base_url" });
 	}
 
 	try {

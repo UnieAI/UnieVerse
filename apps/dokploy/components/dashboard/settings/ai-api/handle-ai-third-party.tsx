@@ -31,7 +31,7 @@ import { z } from "zod";
 
 const Schema = z.object({
 	name: z.string().min(1, { message: "Name is required" }),
-	description: z.string().min(1, { message: "Description is required" }),
+	description: z.string().optional(),
 	apiUrl: z.string().url({ message: "Valid URL required" }),
 	apiKey: z.string().min(1, { message: "API Key is required" }),
 	status: z.boolean(),
@@ -87,6 +87,7 @@ export const HandleAiThirdParty = ({ apiId }: Props) => {
 		try {
 			await mutateAsync({
 				...data,
+				description: data.description ?? null, //description 當它是 undefined 時，處理為 null 
 				apiId: apiId || "",
 			});
 

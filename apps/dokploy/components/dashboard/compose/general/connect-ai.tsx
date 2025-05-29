@@ -32,7 +32,12 @@ const schema = z.object({
     model: z.string().min(1),
 });
 
-export default function ConnectAIForm({ appurl, data }: { appurl?: string, data: any }) {
+interface ConnectAIFormProps {
+    appurl?: string;
+    data: any;
+}
+
+export default function ConnectAIForm({ appurl, data }: ConnectAIFormProps) {
 
     const { accessToken } = useUnieInfra();
 
@@ -139,7 +144,7 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                 toast.error("Failed: " + json1.message);
             }
         } catch (err: any) {
-             setOpen(true)
+            setOpen(true)
             setIsConnect(2)
             toast.error("Model fetch failed: " + err.message);
         }
@@ -182,7 +187,7 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                     <div className="h-10"></div>
                     <div className="w-full  flex items-center justify-center">
                         <a href={`/dashboard/settings/ai-playground?model=${thisModel}&tab=${tab}&token=${token}&api=${UNIEINFRA_OPENAI_API_URL}`}>
-                            <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
+                            <Button className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
                         </a>
                         {/* <a href={`/dashboard/settings/ai-playground?model=qwen_2.5_7b_vllm&tab=Test API&token=SZFVB4VR5YQSBTF_tPWF889IXVKQEYjjsLsiYy3m0vbm76iUWtCYacTWqKI&api=https://unieinfra2.uv-nico.test.unieai.com/`}>
                         <Button  className="">Try it on <span className="text-blue-600 font-bold flex gap-1 items-center"><BotMessageSquare className="size-4" /> AI Playground ~</span></Button>
@@ -191,6 +196,5 @@ export default function ConnectAIForm({ appurl, data }: { appurl?: string, data:
                 </DialogContent>
             </Dialog>
         </TooltipProvider>
-
     );
 }

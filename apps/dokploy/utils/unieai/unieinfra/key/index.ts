@@ -9,6 +9,7 @@ export const UNIEINFRA_OPENAI_API_URL = `${process.env.NEXT_PUBLIC_UNIEINFRA_API
 export const UNIEINFRA_SYSTEM_API_URL = `${process.env.NEXT_PUBLIC_UNIEINFRA_API_URL || process.env.UNIEINFRA_API_URL}/api`;
 
 // ai-playground tab
+export const AI_PLAYGROUND_UNIEINFRA_DEFAULT_TOKEN_NAME = "UnieInfra Playground";
 export const AI_PLAYGROUND_TAB_VALUE = {
     AI: "AI",
     UNIEINFRA: "UnieInfra",

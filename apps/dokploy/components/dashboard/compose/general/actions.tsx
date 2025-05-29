@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +33,11 @@ export const ComposeActions = ({ composeId }: Props) => {
 		api.compose.start.useMutation();
 	const { mutateAsync: stop, isLoading: isStopping } =
 		api.compose.stop.useMutation();
+
+	// useEffect(() => {
+	// 	if (data) console.warn(`data: `, data);
+	// }, [data]);
+
 	return (
 		<div className="flex flex-row gap-4 w-full flex-wrap ">
 			<TooltipProvider delayDuration={0} disableHoverableContent={false}>
@@ -55,26 +61,26 @@ export const ComposeActions = ({ composeId }: Props) => {
 							});
 					}}
 				>
-					{data?.composeStatus !== "done" &&(
-					<Button
-						variant="default"
-						isLoading={data?.composeStatus === "running"}
-						className="flex items-center gap-1.5 group focus-visible:ring-2 focus-visible:ring-offset-2"
-					>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<div className="flex items-center h-fit">
-									<Rocket className="size-4 mr-1" />
-									Deploy
-								</div>
-							</TooltipTrigger>
-							<TooltipPrimitive.Portal>
-								<TooltipContent sideOffset={5} className="z-[60]">
-									<p>Downloads the source code and performs a complete build</p>
-								</TooltipContent>
-							</TooltipPrimitive.Portal>
-						</Tooltip>
-					</Button>
+					{data?.composeStatus !== "done" && (
+						<Button
+							variant="default"
+							isLoading={data?.composeStatus === "running"}
+							className="flex items-center gap-1.5 group focus-visible:ring-2 focus-visible:ring-offset-2"
+						>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<div className="flex items-center h-fit">
+										<Rocket className="size-4 mr-1" />
+										Deploy
+									</div>
+								</TooltipTrigger>
+								<TooltipPrimitive.Portal>
+									<TooltipContent sideOffset={5} className="z-[60]">
+										<p>Downloads the source code and performs a complete build</p>
+									</TooltipContent>
+								</TooltipPrimitive.Portal>
+							</Tooltip>
+						</Button>
 					)}
 				</DialogAction>
 				<DialogAction
@@ -115,7 +121,7 @@ export const ComposeActions = ({ composeId }: Props) => {
 					</Button>
 				</DialogAction>
 				{data?.composeType === "docker-compose" &&
-				data?.composeStatus === "idle" ? (
+					data?.composeStatus === "idle" ? (
 					<DialogAction
 						title="Start Compose"
 						description="Are you sure you want to start this compose?"
