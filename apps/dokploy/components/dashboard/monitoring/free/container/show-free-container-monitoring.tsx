@@ -238,22 +238,14 @@ export const ContainerFreeMonitoring = ({
 					<CardContent>
 						<div className="flex flex-col gap-2 w-full">
 							<span className="text-sm text-muted-foreground">
-								{`GPU Utilization: ${(currentData?.gpu?.value?.utilization || 0)} % / ${(currentData?.gpu?.value?.gpunum * 100 || 100)} %`}
+								{currentData?.gpu?.value?.gpunum === 0
+									? "GPU Utilization: No GPU detected"
+									: `GPU Utilization: ${currentData?.gpu?.value?.utilization || 0} % / ${currentData?.gpu?.value?.gpunum * 100} %`}
 							</span>
 							<span className="text-sm text-muted-foreground">
 								{/* {`Memory Usage: ${(currentData?.gpu?.value?.memory?.used || 0)} / ${(currentData?.gpu?.value?.memory?.total || 0)}`} */}
 								{`Memory Usage: ${(currentData?.gpu?.value?.memory || 0)}`}
 							</span>
-							<Progress
-								value={
-									// @ts-ignore
-									(convertMemoryToBytes(currentData?.gpu?.value?.memory?.used || 0) /
-										// @ts-ignore
-										convertMemoryToBytes(currentData?.gpu?.value?.memory?.total || 0)) *
-									100
-								}
-								className="w-[100%]"
-							/>
 							<DockerGpuChart acummulativeData={acummulativeData.gpu} />
 						</div>
 					</CardContent>

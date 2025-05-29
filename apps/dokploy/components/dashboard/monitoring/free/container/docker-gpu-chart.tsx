@@ -18,14 +18,14 @@ interface Props {
 
 export const DockerGpuChart = ({ acummulativeData }: Props) => {
 	const gpunum = Math.max(
-		...acummulativeData.map((item) => item.value.gpunum ?? 1)
+		...acummulativeData.map((item) => item.value.gpunum ?? 0)
 	);
 	const transformedData = acummulativeData.map((item, index) => {
 		return {
 			name: `Point ${index + 1}`,
 			time: item.time,
 			usage: item.value.utilization,
-			gpunum: item.value.gpunum ?? 1,
+			gpunum: item.value.gpunum,
 		};
 	});
 	return (
@@ -87,7 +87,10 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 					<p>{`Date: ${format(new Date(payload[0].payload.time), "PPpp")}`}</p>
 				)}
 
-				<p>{`Utilization: ${payload[0].payload.usage}% (of ${payload[0].payload.gpunum * 100}%)`}</p>
+				<p>{payload[0].payload.gpunum === 0
+					? "No GPU detected"
+					: `Utilization: ${payload[0].payload.usage}% (of ${payload[0].payload.gpunum * 100}%)`}
+				</p>
 			</div>
 		);
 	}

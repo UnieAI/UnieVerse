@@ -56,7 +56,7 @@ export const recordAdvancedStats = async (
 	const gpuStats = {
 		utilization: gpuStatsForApp?.total?.utilization ?? 0,
 		memory: gpuStatsForApp?.total?.memory ?? 0,
-		gpunum: gpuStatsForApp?.gpus?.length,
+		gpunum: gpuStatsForApp?.gpus?.length ?? 0,
 	};
 	// console.log(`[${appName}] GPU Stats:`, JSON.stringify(gpuStats, null, 2));
 	await updateStatsFile(appName, "gpu", gpuStats);
