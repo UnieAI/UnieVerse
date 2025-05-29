@@ -57,6 +57,8 @@ import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import { TRPCError } from "@trpc/server";
 import { sql } from "drizzle-orm";
 import { dump, load } from "js-yaml";
+import fs from "fs";
+import path from "path";
 import { scheduleJob, scheduledJobs } from "node-schedule";
 import { z } from "zod";
 import packageInfo from "../../../package.json";
@@ -67,6 +69,7 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "../trpc";
+import { TRAEFIK_CONTAINER_NAME } from "@dokploy/server/constants/traefik";
 
 export const settingsRouter = createTRPCRouter({
 	reloadServer: adminProcedure.mutation(async () => {
@@ -111,9 +114,9 @@ export const settingsRouter = createTRPCRouter({
 		.mutation(async ({ input }) => {
 			try {
 				if (input?.serverId) {
-					await execAsync("docker restart dokploy-traefik");
+					await execAsync(`docker restart ${TRAEFIK_CONTAINER_NAME}`);
 				} else if (!IS_CLOUD) {
-					await execAsync("docker restart dokploy-traefik");
+					await execAsync(`docker restart ${TRAEFIK_CONTAINER_NAME}`);
 				}
 			} catch (err) {
 				console.error(err);
@@ -543,8 +546,7 @@ export const settingsRouter = createTRPCRouter({
 		.input(apiServerSchema)
 		.query(async ({ input }) => {
 			const command =
-				"docker container inspect dokploy-traefik --format '{{json .Config.Env}}'";
-
+				`docker container inspect ${TRAEFIK_CONTAINER_NAME} --format '{{json .Config.Env}}'`
 			let result = "";
 			if (input?.serverId) {
 				const execResult = await execAsyncRemote(input.serverId, command);
@@ -572,8 +574,7 @@ export const settingsRouter = createTRPCRouter({
 	haveTraefikDashboardPortEnabled: adminProcedure
 		.input(apiServerSchema)
 		.query(async ({ input }) => {
-			const command = `docker container inspect --format='{{json .NetworkSettings.Ports}}' dokploy-traefik`;
-
+			const command = `docker container inspect --format='{{json .NetworkSettings.Ports}}' "${TRAEFIK_CONTAINER_NAME}"`;
 			let stdout = "";
 			if (input?.serverId) {
 				const result = await execAsyncRemote(input.serverId, command);
@@ -834,10 +835,106 @@ export const settingsRouter = createTRPCRouter({
 	getLogCleanupStatus: adminProcedure.query(async () => {
 		return getLogCleanupStatus();
 	}),
+	
+	updateUnieInfraTraefikConfig: adminProcedure
+		.input(
+			z.object({
+				enabled: z.boolean(),
+				domain: z.string(),
+				serviceUrl: z.string(),
+				https: z.boolean().optional(),
+				certificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const { DYNAMIC_TRAEFIK_PATH } = paths();
+			const filePath = path.join(DYNAMIC_TRAEFIK_PATH, "unieinfra.yml");
+
+			if (!input.enabled) {
+				// Remove the file if disabling
+				if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+				return true;
+			}
+
+			const routers: any = {
+				"unieinfra-router": {
+					rule: `Host(\`${input.domain}\`) && PathPrefix(\`/\`)`,
+					service: "unieinfra-service",
+					entryPoints: ["web"],
+					middlewares: ["redirect-to-https"],
+				}
+			};
+
+			// Only add the secure router if https is enabled
+			if (input.https) {
+				const routerSecure: any = {
+					rule: `Host(\`${input.domain}\`)`,
+					service: "unieinfra-service",
+					entryPoints: ["websecure"],
+				};
+				if (input.certificateType === "letsencrypt") {
+					routerSecure.tls = { certResolver: "letsencrypt" };
+				} else if (input.certificateType === "custom") {
+					routerSecure.tls = {}; // or your custom logic
+				}
+				routers["unieinfra-router-secure"] = routerSecure;
+			}
+
+			const config = {
+				http: {
+					routers,
+					services: {
+						"unieinfra-service": {
+							loadBalancer: {
+								servers: [{ url: input.serviceUrl }],
+								passHostHeader: false,
+							},
+						},
+					},
+				},
+			};
+
+			fs.writeFileSync(filePath, dump(config), "utf8");
+			return true;
+		}),
+	getUnieInfraTraefikConfig: adminProcedure.query(async () => {
+		const { DYNAMIC_TRAEFIK_PATH } = paths();
+		const filePath = path.join(DYNAMIC_TRAEFIK_PATH, "unieinfra.yml");
+
+		if (!fs.existsSync(filePath)) {
+			return {
+				enabled: false,
+				domain: "",
+				serviceUrl: "",
+				https: false,
+				certificateType: "none",
+			};
+		}
+
+		const ymlContent = fs.readFileSync(filePath, "utf8");
+		const config = load(ymlContent) as any;
+
+		const router = config?.http?.routers?.["unieinfra-router"];
+		const routerSecure = config?.http?.routers?.["unieinfra-router-secure"];
+		const service = config?.http?.services?.["unieinfra-service"];
+
+		return {
+			enabled: true,
+			domain: router?.rule
+				? (router.rule.match(/Host\(`([^`]+)`\)/)?.[1] ?? "")
+				: "",
+			serviceUrl:
+				service?.loadBalancer?.servers?.[0]?.url ?? "",
+			https: !!routerSecure,
+			certificateType: routerSecure?.tls?.certResolver === "letsencrypt"
+				? "letsencrypt"
+				: "none",
+		};
+	}),
 });
 
 export const getTraefikPorts = async (serverId?: string) => {
-	const command = `docker container inspect --format='{{json .NetworkSettings.Ports}}' dokploy-traefik`;
+	const command = `docker container inspect --format='{{json .NetworkSettings.Ports}}' ${TRAEFIK_CONTAINER_NAME}`;
 	try {
 		let stdout = "";
 		if (serverId) {

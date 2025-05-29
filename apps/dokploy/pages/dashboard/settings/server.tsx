@@ -1,5 +1,6 @@
 import { WebDomain } from "@/components/dashboard/settings/web-domain";
 import { WebServer } from "@/components/dashboard/settings/web-server";
+import { UwsDomain } from "@/components/dashboard/settings/uws-domain";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { appRouter } from "@/server/api/root";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
@@ -17,6 +18,7 @@ const Page = () => {
 		<div className="w-full">
 			<div className="h-full rounded-xl  max-w-5xl mx-auto flex flex-col gap-4">
 				<WebDomain />
+				<UwsDomain />
 				<WebServer />
 				<div className="w-full flex flex-col gap-4">
 					<Card className="h-full bg-sidebar  p-2.5 rounded-xl  mx-auto w-full">
