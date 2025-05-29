@@ -40,7 +40,12 @@ const defaultData = {
 		time: "",
 	},
 	gpu: {
-		value: { utilization: 0, memory: 0, gpunum: 0},
+		value: { 
+			utilization: 0, 
+			memory: 0,
+			memoryUsedMiB: 0,
+			memoryTotalMiB: 0, 
+			gpunum: 0},
 		time: "",
 	}
 };
@@ -89,6 +94,8 @@ export interface DockerStats {
 		value: {
 			utilization: number,
 			memory: number,
+			memoryUsedMiB: number;
+			memoryTotalMiB: number;
 			gpunum: number,
 		};
 		time: string;
@@ -243,9 +250,13 @@ export const ContainerFreeMonitoring = ({
 									: `GPU Utilization: ${currentData?.gpu?.value?.utilization || 0} % / ${currentData?.gpu?.value?.gpunum * 100} %`}
 							</span>
 							<span className="text-sm text-muted-foreground">
-								{/* {`Memory Usage: ${(currentData?.gpu?.value?.memory?.used || 0)} / ${(currentData?.gpu?.value?.memory?.total || 0)}`} */}
-								{`Memory Usage: ${(currentData?.gpu?.value?.memory || 0)}`}
+								{`Memory Usage: Used: ${(currentData?.gpu?.value?.memoryUsedMiB || 0)} MiB / Total: ${(currentData?.gpu?.value?.memoryTotalMiB || 0)} MiB`}
 							</span>
+							<Progress
+								value={currentData?.gpu?.value?.memoryTotalMiB === 0 
+									? 0 : (currentData?.gpu?.value?.memoryUsedMiB / currentData?.gpu?.value?.memoryTotalMiB) * 100}
+								className="w-[100%]"
+							/>
 							<DockerGpuChart acummulativeData={acummulativeData.gpu} />
 						</div>
 					</CardContent>

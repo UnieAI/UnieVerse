@@ -10,8 +10,8 @@ import {
 import { WebSocketServer } from "ws";
 
 async function getDockerPids(container: string): Promise<{ [pid: string]: string }> {
-	const { stdout } = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
-	// const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
+	// const dockerTopOutput = await execAsync(`docker top ${container}`, { encoding: "utf-8" });
+	const dockerTopOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_docker_top.txt');
 	const lines = dockerTopOutput.stdout?.trim().split("\n") ?? [];
 	if (lines.length < 2) return {};
 
@@ -41,9 +41,18 @@ async function getDockerPids(container: string): Promise<{ [pid: string]: string
 }
 
 async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
+	// Step 0: 查詢 GPU 總記憶體 (MiB)
+	const getGpuTotalMemory = async (): Promise<number[]> => {
+		// const { stdout } = await execAsync(
+		// 	'nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits'
+		// );
+		const { stdout } = await execAsync('bash /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_multi_gpu.sh');
+		return stdout.trim().split('\n').map(val => parseInt(val.trim(), 10));
+	};
+	const totalMemoryList = await getGpuTotalMemory();
 	// Step 1: 查詢 GPU 使用率
-	const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
-	// const pmonOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_pmon.txt');
+	// const pmonOutput = await execAsync('nvidia-smi pmon -c 1');
+	const pmonOutput = await execAsync('cat /home/ubuntu/service/UnieVerse/apps/dokploy/server/wss/fake_pmon.txt');
 	const pmonLines = pmonOutput.stdout.trim().split('\n').filter(line => !line.startsWith('#'));
 
 	// 解析出 PID + SM/MEM 使用量
@@ -70,10 +79,10 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 		}
 	}
 
-	// Step 3: 比對每個 container 的 PID
+	// Step 2: 比對每個 container 的 PID
 	const result: Record<string, {
-		gpus: { gpu: number; utilization: number; memory: number }[];
-		total: { utilization: number; memory: number };
+		gpus: { gpu: number; utilization: number; memoryPercent: number; memoryUsedMiB: number; memoryTotalMiB: number }[];
+		total: { utilization: number; memoryUsedMiB: number; memoryTotalMiB: number};
 	}> = {};
 
 	for (const container of containers) {
@@ -82,7 +91,7 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 		const pidCmdMap = await getDockerPids(containerId);
 		const pids: string[] = Object.keys(pidCmdMap);
 
-		const gpuMap: Record<number, { utilization: number; memory: number }> = {};
+		const gpuMap: Record<number, { utilization: number; memoryPercent: number }> = {};
 
 		for (const pid of pids) {
 			const stat = gpuPidStats[pid];
@@ -90,24 +99,33 @@ async function getGpuUsingContainers(containers: Docker.ContainerInfo[]) {
 
 			const { gpu, sm, mem } = stat;
 			if (!(gpu in gpuMap)) {
-				gpuMap[gpu] = { utilization: 0, memory: 0 };
+				gpuMap[gpu] = { utilization: 0, memoryPercent: 0 };
 			}
-			gpuMap[gpu] ??= { utilization: 0, memory: 0 };
+			gpuMap[gpu] ??= { utilization: 0, memoryPercent: 0 };
 			gpuMap[gpu].utilization += sm;
-			gpuMap[gpu].memory += mem;
+			gpuMap[gpu].memoryPercent += mem;
 		}
 
-		const gpuArray = Object.entries(gpuMap).map(([gpu, val]) => ({
-			gpu: Number(gpu),
-			utilization: val.utilization,
-			memory: val.memory,
-		}));
+		const gpuArray = Object.entries(gpuMap).map(([gpuStr, val]) => {
+			const gpu = Number(gpuStr);
+			const memoryTotalMiB = totalMemoryList[gpu] ?? 0;
+			const memoryUsedMiB = (val.memoryPercent / 100) * memoryTotalMiB;
+
+			return {
+				gpu,
+				utilization: val.utilization,
+				memoryPercent: val.memoryPercent,
+				memoryUsedMiB,
+				memoryTotalMiB,
+			};
+		});
 
 		const total = gpuArray.reduce((acc, g) => {
 			acc.utilization += g.utilization;
-			acc.memory += g.memory;
+			acc.memoryUsedMiB += g.memoryUsedMiB;
+			acc.memoryTotalMiB += g.memoryTotalMiB;
 			return acc;
-		}, { utilization: 0, memory: 0 });
+		}, { utilization: 0, memoryUsedMiB: 0, memoryTotalMiB: 0 });
 
 		result[name] = { gpus: gpuArray, total };
 	}
