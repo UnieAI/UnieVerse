@@ -25,6 +25,8 @@ export const DockerGpuChart = ({ acummulativeData }: Props) => {
 			name: `Point ${index + 1}`,
 			time: item.time,
 			usage: item.value.utilization,
+			memoryUsedMiB: item.value.memoryUsedMiB,
+			memoryTotalMiB: item.value.memoryTotalMiB,
 			gpunum: item.value.gpunum,
 		};
 	});

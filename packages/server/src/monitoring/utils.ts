@@ -5,13 +5,16 @@ import { paths } from "../constants";
 export interface SingleGpuStat {
 	gpu: number;
 	utilization: number;
-	memory: number;
+	memoryPercent: number;
+	memoryUsedMiB: number;
+	memoryTotalMiB: number;
 }
 export interface GpuStats {
 	gpus: SingleGpuStat[];
 	total: {
 		utilization: number;
-		memory: number;
+		memoryUsedMiB: number;
+		memoryTotalMiB: number;
 	};
 }
 export interface Container {
@@ -55,7 +58,8 @@ export const recordAdvancedStats = async (
 	const gpuStatsForApp = stats?.GPUs?.[appName];
 	const gpuStats = {
 		utilization: gpuStatsForApp?.total?.utilization ?? 0,
-		memory: gpuStatsForApp?.total?.memory ?? 0,
+		memoryUsedMiB: gpuStatsForApp?.total?.memoryUsedMiB ?? 0,
+		memoryTotalMiB: gpuStatsForApp?.total?.memoryTotalMiB ?? 0,
 		gpunum: gpuStatsForApp?.gpus?.length ?? 0,
 	};
 	// console.log(`[${appName}] GPU Stats:`, JSON.stringify(gpuStats, null, 2));
