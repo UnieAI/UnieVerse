@@ -263,6 +263,21 @@ const allocateAutoGPU = async (
 	return result;
 }
 
+// TODO: pls move these function somewhere else someday
+export const recycleResource = async (nodeId: string, attributes: { [key: string]: string }) => {
+	const { "uvs-res-uuid": resUuid } = attributes;
+	console.log("RECYCLE_RESOURCE:", "nodeId:", nodeId, "resUuid:", resUuid);
+	const updatedRows = await db.update(allocations)
+		.set({ usedBy: null })
+		.where(and(eq(allocations.usedBy, resUuid!), eq(allocations.nodeId, nodeId)))
+		.returning({ usedBy: allocations.usedBy });
+
+	console.log("RECYCLE_RESOURCE:", "updatedRows:", updatedRows);
+	if (!(updatedRows.length === 1 && updatedRows[0]!.usedBy === null)) {
+		throw new Error(`Failed to recycle resource with uuid='${resUuid}'`);
+	}
+}
+
 export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 	const writeStream = createWriteStream(logPath, { flags: "a" });
 	const { sourceType, appName, mounts, composeType, domains } = compose;
