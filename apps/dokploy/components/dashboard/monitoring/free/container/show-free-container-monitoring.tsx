@@ -7,6 +7,7 @@ import { DockerCpuChart } from "./docker-cpu-chart";
 import { DockerDiskChart } from "./docker-disk-chart";
 import { DockerMemoryChart } from "./docker-memory-chart";
 import { DockerNetworkChart } from "./docker-network-chart";
+import { DockerGpuChart } from './docker-gpu-chart';
 
 const defaultData = {
 	cpu: {
@@ -38,6 +39,15 @@ const defaultData = {
 		value: { diskTotal: 0, diskUsage: 0, diskUsedPercentage: 0, diskFree: 0 },
 		time: "",
 	},
+	gpu: {
+		value: { 
+			utilization: 0, 
+			memory: 0,
+			memoryUsedMiB: 0,
+			memoryTotalMiB: 0, 
+			gpunum: 0},
+		time: "",
+	}
 };
 
 interface Props {
@@ -80,6 +90,16 @@ export interface DockerStats {
 
 		time: string;
 	};
+	gpu: {
+		value: {
+			utilization: number,
+			memory: number,
+			memoryUsedMiB: number;
+			memoryTotalMiB: number;
+			gpunum: number,
+		};
+		time: string;
+	};
 }
 
 export type DockerStatsJSON = {
@@ -88,6 +108,7 @@ export type DockerStatsJSON = {
 	block: DockerStats["block"][];
 	network: DockerStats["network"][];
 	disk: DockerStats["disk"][];
+	gpu: DockerStats["gpu"][];
 };
 
 export const convertMemoryToBytes = (
@@ -130,6 +151,7 @@ export const ContainerFreeMonitoring = ({
 		block: [],
 		network: [],
 		disk: [],
+		gpu: [],
 	});
 	const [currentData, setCurrentData] = useState<DockerStats>(defaultData);
 
@@ -142,6 +164,7 @@ export const ContainerFreeMonitoring = ({
 			block: [],
 			network: [],
 			disk: [],
+			gpu: [],
 		});
 	}, [appName]);
 
@@ -154,6 +177,7 @@ export const ContainerFreeMonitoring = ({
 			block: data.block[data.block.length - 1] ?? currentData.block,
 			network: data.network[data.network.length - 1] ?? currentData.network,
 			disk: data.disk[data.disk.length - 1] ?? currentData.disk,
+			gpu: data.gpu[data.gpu.length - 1] ?? currentData.gpu,
 		});
 		setAcummulativeData({
 			block: data?.block || [],
@@ -161,6 +185,7 @@ export const ContainerFreeMonitoring = ({
 			disk: data?.disk || [],
 			memory: data?.memory || [],
 			network: data?.network || [],
+			gpu: data?.gpu || [],
 		});
 	}, [data]);
 
@@ -179,6 +204,7 @@ export const ContainerFreeMonitoring = ({
 				block: value.data.block ?? currentData.block,
 				disk: value.data.disk ?? currentData.disk,
 				network: value.data.network ?? currentData.network,
+				gpu: value.data.gpu ?? currentData.gpu,
 			};
 
 			setCurrentData(data);
@@ -189,6 +215,7 @@ export const ContainerFreeMonitoring = ({
 				block: [...prevData.block, data.block],
 				network: [...prevData.network, data.network],
 				disk: [...prevData.disk, data.disk],
+				gpu: [...prevData.gpu, data.gpu],
 			}));
 		};
 
@@ -211,6 +238,29 @@ export const ContainerFreeMonitoring = ({
 			</header>
 
 			<div className="grid gap-6 lg:grid-cols-2">
+				<Card className="bg-background">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">GPU Usage</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="flex flex-col gap-2 w-full">
+							<span className="text-sm text-muted-foreground">
+								{currentData?.gpu?.value?.gpunum === 0
+									? "GPU Utilization: No GPU detected"
+									: `GPU Utilization: ${currentData?.gpu?.value?.utilization || 0} % / ${currentData?.gpu?.value?.gpunum * 100} %`}
+							</span>
+							<span className="text-sm text-muted-foreground">
+								{`Memory Usage: Used: ${(currentData?.gpu?.value?.memoryUsedMiB || 0)} MiB / Total: ${(currentData?.gpu?.value?.memoryTotalMiB || 0)} MiB`}
+							</span>
+							<Progress
+								value={currentData?.gpu?.value?.memoryTotalMiB === 0 
+									? 0 : (currentData?.gpu?.value?.memoryUsedMiB / currentData?.gpu?.value?.memoryTotalMiB) * 100}
+								className="w-[100%]"
+							/>
+							<DockerGpuChart acummulativeData={acummulativeData.gpu} />
+						</div>
+					</CardContent>
+				</Card>
 				<Card className="bg-background">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
