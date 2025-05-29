@@ -75,5 +75,18 @@
 	"settings.terminal.connectionSettings": "終端機設定",
 	"settings.terminal.ipAddress": "IP 位址",
 	"settings.terminal.port": "埠",
-	"settings.terminal.username": "使用者名稱"
+	"settings.terminal.username": "使用者名稱",
+
+	"settings.unieinfra.domain.title": "UnieInfra 網域",
+	"settings.unieinfra.domain.description": "設定您的 UnieInfra 服務網域。這將更新 Traefik，讓您的 UnieInfra 服務可透過指定網域存取。",
+	"settings.unieinfra.domain.form.domain": "UnieInfra 網域",
+	"settings.unieinfra.domain.form.domainPlaceholder": "unieinfra.example.com",
+	"settings.unieinfra.domain.form.letsEncryptEmail": "Let's Encrypt 電子郵件",
+	"settings.unieinfra.domain.form.letsEncryptEmailPlaceholder": "unieinfra@example.com",
+	"settings.unieinfra.domain.form.https": "HTTPS",
+	"settings.unieinfra.domain.form.httpsDescription": "自動申請 SSL 憑證。",
+	"settings.unieinfra.domain.form.certificate.label": "憑證類型",
+	"settings.unieinfra.domain.form.certificate.placeholder": "選擇憑證類型",
+	"settings.unieinfra.domain.form.certificateOptions.none": "無",
+	"settings.unieinfra.domain.form.certificateOptions.letsencrypt": "LetsEncrypt"
 }
