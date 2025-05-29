@@ -1,4 +1,5 @@
 import { paths } from "@dokploy/server/constants";
+import { Allocation, AllocationCreate, allocations } from "@dokploy/server/db/schema/allocation";
 import type { InferResultType } from "@dokploy/server/types/with";
 import boxen from "boxen";
 import { dump } from "js-yaml";
@@ -11,6 +12,7 @@ import {
 import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Compose, ComposeSpecification, getNodeInfo, getSwarmNodes } from "../..";
+import { db } from "../../db";
 import {
 	getComposePath,
 	loadDockerCompose,
@@ -25,6 +27,7 @@ import {
 } from "../docker/utils";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { spawnAsync } from "../process/spawnAsync";
+import { and, eq, isNull } from "drizzle-orm";
 
 export type ComposeNested = InferResultType<
 	"compose",
@@ -44,66 +47,44 @@ const writeBackToCompose = async (
 	}
 };
 
-const collectGpuTypeSet = (labels: Object) => {
+const collectGpuTypeSet = (gpus: Allocation[]) => {
 	const resMap: { [key: string]: Set<string> } = {};
-	for (const [label, lbJValue] of Object.entries(labels)) {
-		if (label === "uvs-gpu" || label.startsWith("uvs-gpu-")) {
-			const lbName = label;
-			const lbValue: string[] = JSON.parse(lbJValue);
-			console.log("COUNT_GPU_RESOURCES:", "[lbName, lbValue]:", [lbName, lbValue]);
+	for (const { deviceId, tags } of gpus) {
+		for (const tag of tags) {
+			const lbName = tag;
+			const lbValue = deviceId;
 			if (!(lbName in resMap)) {
 				resMap[lbName] = new Set();
 			}
-			lbValue.forEach(gpuName => resMap[lbName]!.add(gpuName));
+			resMap[lbName]!.add(lbValue);
 		}
 	}
 	return resMap;
 }
 
-const parseGpuInfo = (labels: Object): { [key: string]: { labels?: string[], used_by?: string | null } } => {
-	const resMap: { [key: string]: object } = {};
-	for (const [label, lbJValue] of Object.entries(labels)) {
-		if (label.startsWith("uvs-gpuinfo-")) {
-			const lbName = label;
-			const lbValue: object[] = JSON.parse(lbJValue);
-			resMap[lbName] = lbValue;
-		}
+const parseGpuInfo = (gpus: Allocation[]): { [key: string]: Allocation } => {
+	const resMap: { [key: string]: Allocation } = {};
+	for (const label of gpus) {
+		const { deviceId } = label;
+		const lbName = deviceId;
+		const lbValue = label;
+		resMap[lbName] = lbValue;
 	}
 	return resMap;
 }
-
-const execCommand = async (command: string, serverId?: string) => {
-	try {
-		let stdout = "";
-		let stderr = "";
-
-		if (serverId) {
-			const result = await execAsyncRemote(serverId, command);
-			stdout = result.stdout;
-			stderr = result.stderr;
-		} else {
-			const result = await execAsync(command);
-			stdout = result.stdout;
-			stderr = result.stderr;
-		}
-
-		if (stderr) {
-			console.error(`Error: ${stderr}`);
-			return;
-		}
-
-		return stdout;
-	} catch (error) {
-		console.error("execCommand: Uncaught error:", error);
-		return;
-	}
-};
-
 
 const allocateAutoGPU = async (
 	compose: Compose,
 	nodes: any[],
 ) => {
+	// For the steps of safe allocation:
+	//   1. Refresh gpu info (TTL=300)
+	//   2. Search & simulation
+	//   ---
+	//   3. Inject scheduling & resource hint
+	//   4. Update GPU allocation info
+	//   5. Schedule resource
+
 	// load docker compose (domain.ts:addDomainToCompose)
 	let result: ComposeSpecification | null;
 	if (compose.serverId) {
@@ -118,17 +99,10 @@ const allocateAutoGPU = async (
 
 	const privServiceResources: { [key: string]: { service: string, count: number }[] } = {};
 	for (const [svcName, svc] of Object.entries(result?.services ?? {})) {
-		console.log("ALLOCATE AUTO GPU: svcName: ", svcName);
-		console.log("ALLOCATE AUTO GPU: svc:", svc);
-
-		// console.log("ALLOCATE AUTO GPU: DEVICES:", svc.deploy?.resources?.reservations?.devices);
-
 		const resResv: any | null = svc.deploy?.resources?.reservations;
-		console.log("ALLOCATE AUTO GPU: RESERVATION:", resResv);
 
 		const privResv: any[] | null = resResv?.unieai;
 		if (privResv) {
-			console.log("ALLOCATE AUTO GPU: privResv:", privResv);
 			for (const req of privResv) {
 				const lbName = req.kind;
 				const lbValue = req.value;
@@ -165,8 +139,15 @@ const allocateAutoGPU = async (
 	for (const node of nodes) {
 		let okay = true;
 
-		const selectorGpus = collectGpuTypeSet(node.Spec.Labels);
-		const gpuInfoMap = parseGpuInfo(node.Spec.Labels);
+		const nodeDevices = await db.query.allocations.findMany({
+			where: and(
+				eq(allocations.nodeId, node["ID"]),
+				eq(allocations.type, "gpu"),
+				isNull(allocations.usedBy)
+			)
+		});
+		const selectorGpus = collectGpuTypeSet(nodeDevices);
+		const gpuInfoMap = parseGpuInfo(nodeDevices);
 		console.log("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
 		// console.log("ALLOCATE AUTO GPU:", "gpuInfoMap:", gpuInfoMap);
 
@@ -187,21 +168,17 @@ const allocateAutoGPU = async (
 					lbValCount++
 				) {
 					const gpuDevice = gpuDeviceIter.next().value!;
-					console.log("ALLOCATE AUTO GPU:", "service:", service, "gpuDevice:", gpuDevice);
 
-					const gpuLabelList = gpuInfoMap[`uvs-gpuinfo-${gpuDevice.toLowerCase()}`]!.labels ?? [];
-					console.log("ALLOCATE AUTO GPU:", "gpuLabelList:", gpuLabelList);
+					const gpuLabelList = gpuInfoMap[gpuDevice]!.tags ?? [];
 					for (const gpuLabel of gpuLabelList) {
 						selectorGpus[gpuLabel]?.delete(gpuDevice);
 					}
-					// gpuDevices!.delete(gpuDevice);
 
 					if (!(service in gpuAllocated)) {
 						gpuAllocated[service] = [];
 					}
 					gpuAllocated[service]!.push(gpuDevice);
 				}
-
 			}
 		}
 
@@ -248,43 +225,24 @@ const allocateAutoGPU = async (
 
 				const labels = svc.labels ?? {};
 				if (Array.isArray(labels)) {
-					labels.push(`uvs-uuid=${uuid}`);
+					labels.push(`uvs-res-uuid=${uuid}`);
 				} else {
-					labels["uvs-uuid"] = uuid;
+					labels["uvs-res-uuid"] = uuid;
 				}
 				svc.labels = labels;
-			}
-
-			// Update GPU list labels
-			for (const [gpuType, leftGpuDevices] of Object.entries(selectorGpus)) {
-				// update (by remove then add) the left GPU devices
-				const leftGpuDeviceSpec = JSON.stringify(Array.from(leftGpuDevices));
-				await execCommand(`docker node update --label-rm ${gpuType} ${node["ID"]}`, compose.serverId);
-				await execCommand(
-					`docker node update --label-add ${gpuType}='${leftGpuDeviceSpec}' ${node["ID"]}`,
-					compose.serverId
-				);
 			}
 
 			// Update GPU info
 			for (const [service, serviceGpuDevices] of Object.entries(gpuAllocated)) {
 				for (const gpuDevice of serviceGpuDevices) {
 					const gpuDeviceId = gpuDevice.toLowerCase();
-					const gpuInfoLabel = `uvs-gpuinfo-${gpuDeviceId}`;
+					console.log("ALLOCATE AUTO GPU:", "gpuDeviceId:", gpuDeviceId);
 
-					const gpuInfo = gpuInfoMap[gpuInfoLabel];
-					console.log("ALLOCATE AUTO GPU:", "gpuInfoLabel:", gpuInfoLabel);
-					console.log("ALLOCATE AUTO GPU:", "gpuInfo:", gpuInfo);
-					gpuInfo!.used_by = serviceUuidMap[service];
-
-
-					await execCommand(`docker node update --label-rm ${gpuInfoLabel} ${node["ID"]}`, compose.serverId);
-					await execCommand(
-						`docker node update --label-add ${gpuInfoLabel}='${JSON.stringify(gpuInfo)}' ${node["ID"]}`,
-						compose.serverId
-					);
+					await db.update(allocations).set({ usedBy: serviceUuidMap[service] }).where(eq(allocations.deviceId, gpuDeviceId));
 				}
 			}
+
+			console.log("ALLOCATE AUTO GPU:", "compose.env:", compose.env);
 
 			break;
 		}
@@ -314,9 +272,9 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 			);
 		}
 
-		const nodes = await getSwarmNodes(compose.serverId).then(
+		const nodes = await getSwarmNodes(compose.serverId || undefined).then(
 			nodes => Promise.all(
-				(nodes ?? []).map(({ ID: nodeId }) => getNodeInfo(nodeId, compose.serverId))
+				(nodes ?? []).map(({ ID: nodeId }) => getNodeInfo(nodeId, compose.serverId || undefined))
 			)
 		);
 
@@ -366,7 +324,7 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 		if (compose.isolatedDeployment) {
 			await execAsync(
 				`docker network connect ${compose.appName} $(docker ps --filter "name=dokploy-traefik" -q) >/dev/null 2>&1`,
-			).catch(() => {});
+			).catch(() => { });
 		}
 
 		writeStream.write("Docker Compose Deployed: ✅");

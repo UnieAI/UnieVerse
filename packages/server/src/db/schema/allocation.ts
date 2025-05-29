@@ -10,6 +10,10 @@ export const allocations = pgTable("allocation", {
 
 	usedBy: text("usedBy"),
 
+	tags: text("tags").array()
+		.default([])
+		.notNull(),
+
 	type: text("type")
 		.notNull()
 		.$default(() => "gpu"),
@@ -32,3 +36,4 @@ export const allocations = pgTable("allocation", {
 }));
 
 export type Allocation = typeof allocations.$inferSelect;
+export type AllocationCreate = typeof allocations.$inferInsert;

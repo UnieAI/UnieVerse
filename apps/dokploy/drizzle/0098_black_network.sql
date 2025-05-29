@@ -1,0 +1,1 @@
+ALTER TABLE "allocation" ADD COLUMN "tags" text[] DEFAULT '{}' NOT NULL;
