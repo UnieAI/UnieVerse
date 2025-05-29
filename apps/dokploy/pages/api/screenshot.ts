@@ -1,31 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
 import path from 'path';
-import os from 'os';
 import { promises as fs } from 'fs';
-
-function getLocalChromeExecutablePath(): string {
-  const platform = os.platform();
-  if (platform === 'darwin') {
-    return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-  }
-  if (platform === 'win32') {
-    return 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-  }
-  return '/usr/bin/google-chrome'; // Linux default
-}
 
 async function serveFallbackImage(res: NextApiResponse) {
   try {
-    // const fallbackPath = path.join(process.cwd(), 'public', 'default-web-screen-shot.gif');
-    const fallbackPath = path.join(process.cwd(), 'public', 'green-screen.jpg');
+    const fallbackPath = path.join(process.cwd(), 'public', 'placeholder.png');
     const fallbackBuffer = await fs.readFile(fallbackPath);
     res.setHeader('Content-Type', 'image/png');
     res.status(200).end(fallbackBuffer);
   } catch (fallbackError) {
-    console.error('[預設圖片讀取失敗]', fallbackError);
-    res.status(500).json({ error: '截圖與預設圖片皆失敗' });
+    const error = fallbackError as Error;
+    console.error('[Failed to read default image / 預設圖片讀取失敗]', {
+      error: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ 
+      error: 'Failed to capture screenshot and read default image / 截圖與預設圖片皆失敗' 
+    });
   }
 }
 
@@ -34,16 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!url || !/^https?:\/\//.test(url)) {
-    console.warn('[無效網址] 回傳預設圖片');
+    console.warn('[Invalid URL, serving default image / 無效網址，回傳預設圖片]', { url });
     return await serveFallbackImage(res);
   }
 
   try {
     const browser = await puppeteer.launch({
-      args: isProd ? chromium.args : [],
-      executablePath: isProd
-        ? await chromium.executablePath()
-        : getLocalChromeExecutablePath(),
+      args: isProd ? ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'] : ['--disable-gpu'],
+      executablePath: isProd ? process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/lib/chromium/chromium' : '/usr/lib/chromium/chromium',
       headless: true,
       ignoreHTTPSErrors: true,
       defaultViewport: {
@@ -53,17 +43,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const page = await browser.newPage();
-    // await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const buffer = await page.screenshot({ type: 'png' });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    const screenshot = await page.screenshot({ type: 'png', fullPage: true });
     await browser.close();
 
     res.setHeader('Content-Type', 'image/png');
-    res.status(200).end(buffer);
+    res.status(200).end(screenshot);
   } catch (error) {
-    console.error('[截圖失敗，改用預設圖]', error);
+    const err = error as Error;
+    console.error('[Screenshot failed, serving default image / 截圖失敗，改用預設圖]', {
+      error: err.message,
+      stack: err.stack,
+      url,
+    });
     return await serveFallbackImage(res);
   }
 }
