@@ -235,10 +235,16 @@ const allocateAutoGPU = async (
 			// Update GPU info
 			for (const [service, serviceGpuDevices] of Object.entries(gpuAllocated)) {
 				for (const gpuDevice of serviceGpuDevices) {
-					const gpuDeviceId = gpuDevice.toLowerCase();
-					console.log("ALLOCATE AUTO GPU:", "gpuDeviceId:", gpuDeviceId);
+					console.log("ALLOCATE AUTO GPU:", "gpuDevice:", gpuDevice);
 
-					await db.update(allocations).set({ usedBy: serviceUuidMap[service] }).where(eq(allocations.deviceId, gpuDeviceId));
+					const updatedRows = await db.update(allocations)
+						.set({ usedBy: serviceUuidMap[service]! })
+						.where(eq(allocations.deviceId, gpuDevice))
+						.returning({ id: allocations.deviceId });
+
+					if (!(updatedRows.length === 1 && updatedRows[0]!.id === gpuDevice)) {
+						throw new Error(`Failed to update resource '${gpuDevice}' for service '${service}'`);
+					}
 				}
 			}
 
