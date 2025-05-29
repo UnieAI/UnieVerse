@@ -74,5 +74,21 @@
 	"settings.terminal.connectionSettings": "Connection settings",
 	"settings.terminal.ipAddress": "IP Address",
 	"settings.terminal.port": "Port",
-	"settings.terminal.username": "Username"
+	"settings.terminal.username": "Username",
+
+	"settings.unieinfra.domain.title": "UnieInfra Domain",
+	"settings.unieinfra.domain.description": "Configure the domain for your UnieInfra web service. This will update Traefik so your UnieInfra service is accessible via the specified domain.",
+	"settings.unieinfra.domain.form.enabled": "Enable UnieInfra Domain",
+	"settings.unieinfra.domain.form.domain": "UnieInfra Domain",
+	"settings.unieinfra.domain.form.domainPlaceholder": "unieinfra.example.com",
+	"settings.unieinfra.domain.form.serviceUrl": "Service URL",
+	"settings.unieinfra.domain.form.serviceUrlPlaceholder": "http://localhost:8080",
+	"settings.unieinfra.domain.form.https": "HTTPS",
+	"settings.unieinfra.domain.form.httpsDescription": "Automatically provision SSL Certificate.",
+	"settings.unieinfra.domain.form.certificate.label": "Certificate Type",
+	"settings.unieinfra.domain.form.certificate.placeholder": "Select certificate type",
+	"settings.unieinfra.domain.form.certificateOptions.none": "None",
+	"settings.unieinfra.domain.form.certificateOptions.letsencrypt": "LetsEncrypt",
+	"settings.unieinfra.domain.success": "UnieInfra Traefik config updated",
+	"settings.unieinfra.domain.error": "Error updating UnieInfra Traefik config"
 }

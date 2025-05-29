@@ -1,0 +1,1 @@
+export const TRAEFIK_CONTAINER_NAME = process.env.TRAEFIK_CONTAINER_NAME || "unieverse-dokploy-traefik-1";
