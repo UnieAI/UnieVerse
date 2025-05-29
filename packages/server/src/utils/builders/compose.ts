@@ -115,7 +115,7 @@ const allocateAutoGPU = async (
 			delete resResv.unieai;
 		}
 	}
-	console.log("ALLOCATE AUTO GPU: ", "privResources:", privServiceResources);
+	console.debug("ALLOCATE AUTO GPU: ", "privServiceResources:", privServiceResources);
 
 	if (!privServiceResources) {
 		return result;
@@ -148,8 +148,7 @@ const allocateAutoGPU = async (
 		});
 		const selectorGpus = collectGpuTypeSet(nodeDevices);
 		const gpuInfoMap = parseGpuInfo(nodeDevices);
-		console.log("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
-		// console.log("ALLOCATE AUTO GPU:", "gpuInfoMap:", gpuInfoMap);
+		console.debug("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
 
 		const gpuAllocated: { [key: string]: string[] } = {};
 		for (const lbName of privKeys) {
@@ -197,15 +196,12 @@ const allocateAutoGPU = async (
 				svc.deploy!.placement = placement;
 			}
 
-			// console.log("ALLOCATE AUTO GPU: gpuAllocated: ", gpuAllocated);
-
 			// Add service GPU spec
 			for (const [svcName, svc] of Object.entries(result!.services!)) {
 				const gpuDevices = gpuAllocated[svcName];
 				if (gpuDevices) {
 					const deviceSpec = gpuDevices.join(",");
 					const res = svc.environment ?? {};
-					console.log(`ALLOCATE AUTO GPU: service '${svcName}: svc.environment: '`, svc.environment);
 					if (Array.isArray(res)) {
 						// override from the back?
 						// Won't allow specifying this env, though
@@ -235,8 +231,6 @@ const allocateAutoGPU = async (
 			// Update GPU info
 			for (const [service, serviceGpuDevices] of Object.entries(gpuAllocated)) {
 				for (const gpuDevice of serviceGpuDevices) {
-					console.log("ALLOCATE AUTO GPU:", "gpuDevice:", gpuDevice);
-
 					const updatedRows = await db.update(allocations)
 						.set({ usedBy: serviceUuidMap[service]! })
 						.where(eq(allocations.deviceId, gpuDevice))
@@ -248,8 +242,6 @@ const allocateAutoGPU = async (
 				}
 			}
 
-			console.log("ALLOCATE AUTO GPU:", "compose.env:", compose.env);
-
 			break;
 		}
 	}
@@ -258,21 +250,19 @@ const allocateAutoGPU = async (
 		throw new Error(`Insufficient resource for resources: ${JSON.stringify(privServiceResources)}`);
 	}
 
-	console.log("ALLOCATE AUTO GPU: result:");
-	console.dir(result, { depth: null });
+	console.debug("ALLOCATE AUTO GPU:", "result:", JSON.stringify(result));
 	return result;
 }
 
 // TODO: pls move these function somewhere else someday
 export const recycleResource = async (nodeId: string, attributes: { [key: string]: string }) => {
 	const { "uvs-res-uuid": resUuid } = attributes;
-	console.log("RECYCLE_RESOURCE:", "nodeId:", nodeId, "resUuid:", resUuid);
+	console.debug("RECYCLE_RESOURCE:", "nodeId:", nodeId, "resUuid:", resUuid);
 	const updatedRows = await db.update(allocations)
 		.set({ usedBy: null })
 		.where(and(eq(allocations.usedBy, resUuid!), eq(allocations.nodeId, nodeId)))
 		.returning({ usedBy: allocations.usedBy });
 
-	console.log("RECYCLE_RESOURCE:", "updatedRows:", updatedRows);
 	if (!(updatedRows.length === 1 && updatedRows[0]!.usedBy === null)) {
 		throw new Error(`Failed to recycle resource with uuid='${resUuid}'`);
 	}
@@ -299,7 +289,6 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 			)
 		);
 
-		// console.log("BUILD COMPOSE: Swarm Nodes: ", nodes);
 		const allocateRes = await allocateAutoGPU(compose, nodes);
 		await writeBackToCompose(compose, allocateRes);
 
