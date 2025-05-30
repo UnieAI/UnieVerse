@@ -1,14 +1,22 @@
+import { paths } from "@dokploy/server/constants";
+import { Allocation, AllocationCreate, allocations } from "@dokploy/server/db/schema/allocation";
+import type { InferResultType } from "@dokploy/server/types/with";
+import boxen from "boxen";
+import { dump } from "js-yaml";
 import {
 	createWriteStream,
 	existsSync,
 	mkdirSync,
 	writeFileSync,
 } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { InferResultType } from "@dokploy/server/types/with";
-import boxen from "boxen";
+import { Compose, ComposeSpecification, getNodeInfo, getSwarmNodes } from "../..";
+import { db } from "../../db";
 import {
+	getComposePath,
+	loadDockerCompose,
+	loadDockerComposeRemote,
 	writeDomainsToCompose,
 	writeDomainsToComposeRemote,
 } from "../docker/domain";
@@ -19,11 +27,247 @@ import {
 } from "../docker/utils";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { spawnAsync } from "../process/spawnAsync";
+import { and, eq, isNull } from "drizzle-orm";
 
 export type ComposeNested = InferResultType<
 	"compose",
 	{ project: true; mounts: true; domains: true }
 >;
+
+const writeBackToCompose = async (
+	compose: Compose,
+	composeConverted: ComposeSpecification | null,
+) => {
+	const path = getComposePath(compose); // from domain utils
+	const composeString = dump(composeConverted, { lineWidth: 1000 });
+	try {
+		await writeFile(path, composeString, "utf8");
+	} catch (error) {
+		throw error;
+	}
+};
+
+const collectGpuTypeSet = (gpus: Allocation[]) => {
+	const resMap: { [key: string]: Set<string> } = {};
+	for (const { deviceId, tags } of gpus) {
+		for (const tag of tags) {
+			const lbName = tag;
+			const lbValue = deviceId;
+			if (!(lbName in resMap)) {
+				resMap[lbName] = new Set();
+			}
+			resMap[lbName]!.add(lbValue);
+		}
+	}
+	return resMap;
+}
+
+const parseGpuInfo = (gpus: Allocation[]): { [key: string]: Allocation } => {
+	const resMap: { [key: string]: Allocation } = {};
+	for (const label of gpus) {
+		const { deviceId } = label;
+		const lbName = deviceId;
+		const lbValue = label;
+		resMap[lbName] = lbValue;
+	}
+	return resMap;
+}
+
+const allocateAutoGPU = async (
+	compose: Compose,
+	nodes: any[],
+) => {
+	// For the steps of safe allocation:
+	//   1. Refresh gpu info (TTL=300)
+	//   2. Search & simulation
+	//   ---
+	//   3. Inject scheduling & resource hint
+	//   4. Update GPU allocation info
+	//   5. Schedule resource
+
+	// load docker compose (domain.ts:addDomainToCompose)
+	let result: ComposeSpecification | null;
+	if (compose.serverId) {
+		result = await loadDockerComposeRemote(compose);
+	} else {
+		result = await loadDockerCompose(compose);
+	}
+
+	if (!result) {
+		return null;
+	}
+
+	const privServiceResources: { [key: string]: { service: string, count: number }[] } = {};
+	for (const [svcName, svc] of Object.entries(result?.services ?? {})) {
+		const resResv: any | null = svc.deploy?.resources?.reservations;
+
+		const privResv: any[] | null = resResv?.unieai;
+		if (privResv) {
+			for (const req of privResv) {
+				const lbName = req.kind;
+				const lbValue = req.value;
+
+				if (!(lbName in privServiceResources)) {
+					privServiceResources[lbName] = [];
+				}
+				privServiceResources[lbName]!.push({ service: svcName, count: lbValue });
+			}
+			delete resResv.unieai;
+		}
+	}
+	console.debug("ALLOCATE AUTO GPU: ", "privServiceResources:", privServiceResources);
+
+	if (!privServiceResources) {
+		return result;
+	}
+
+	// The GPU names are designed to be categorized by prefix
+	//   i.e. "gpu-nvidia-h200" would be one of "gpu-nvidia".
+	const privKeys = Object.keys(privServiceResources).sort(
+		(a: string, b: string) => {
+			// For the topology to be right, we need to sort them.
+			// TLDR; sort by longer length, then by dictionary order.
+			if (a.length !== b.length) {
+				return -(a.length - b.length);
+			}
+			return Number(a > b) - Number(a < b);
+		}
+	);
+
+	// Simluate. Find first available node.
+	let foundNode = null;
+	for (const node of nodes) {
+		let okay = true;
+
+		const nodeDevices = await db.query.allocations.findMany({
+			where: and(
+				eq(allocations.nodeId, node["ID"]),
+				eq(allocations.type, "gpu"),
+				isNull(allocations.usedBy)
+			)
+		});
+		const selectorGpus = collectGpuTypeSet(nodeDevices);
+		const gpuInfoMap = parseGpuInfo(nodeDevices);
+		console.debug("ALLOCATE AUTO GPU:", "selectorGpus:", selectorGpus);
+
+		const gpuAllocated: { [key: string]: string[] } = {};
+		for (const lbName of privKeys) {
+			const lbValue = privServiceResources[lbName]!;
+			const lbTotalRequest = lbValue.reduce((prev, curr) => prev + curr.count, 0);
+			const gpuDevices = selectorGpus[lbName];
+			if ((gpuDevices?.size || 0) < lbTotalRequest) {
+				okay = false;
+				break;
+			}
+
+			const gpuDeviceIter = gpuDevices!.values();
+			for (const { service, count } of lbValue) {
+				for (let lbValCount = 0;
+					lbValCount < count;
+					lbValCount++
+				) {
+					const gpuDevice = gpuDeviceIter.next().value!;
+
+					const gpuLabelList = gpuInfoMap[gpuDevice]!.tags ?? [];
+					for (const gpuLabel of gpuLabelList) {
+						selectorGpus[gpuLabel]?.delete(gpuDevice);
+					}
+
+					if (!(service in gpuAllocated)) {
+						gpuAllocated[service] = [];
+					}
+					gpuAllocated[service]!.push(gpuDevice);
+				}
+			}
+		}
+
+		if (okay) {
+			foundNode = node;
+
+			// Add placement
+			// Note: this is the definite (extra) constraint here.
+			// We would not allow service in the same file to be scheduled on different nodes.
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const placement = svc.deploy!.placement ?? {};
+				const constraints = placement.constraints ?? [];
+
+				constraints.push(`node.id==${node["ID"]}`);
+				placement.constraints = constraints;
+				svc.deploy!.placement = placement;
+			}
+
+			// Add service GPU spec
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const gpuDevices = gpuAllocated[svcName];
+				if (gpuDevices) {
+					const deviceSpec = gpuDevices.join(",");
+					const res = svc.environment ?? {};
+					if (Array.isArray(res)) {
+						// override from the back?
+						// Won't allow specifying this env, though
+						res.push(`NVIDIA_VISIBLE_DEVICES=${deviceSpec}`);
+					} else {
+						res["NVIDIA_VISIBLE_DEVICES"] = deviceSpec;
+					}
+					svc.environment = res;
+				}
+			}
+
+			// Add service labels (for backward selector)
+			const serviceUuidMap: { [key: string]: string } = {};
+			for (const [svcName, svc] of Object.entries(result!.services!)) {
+				const uuid = crypto.randomUUID();
+				serviceUuidMap[svcName] = uuid;
+
+				const labels = svc.labels ?? {};
+				if (Array.isArray(labels)) {
+					labels.push(`uvs-res-uuid=${uuid}`);
+				} else {
+					labels["uvs-res-uuid"] = uuid;
+				}
+				svc.labels = labels;
+			}
+
+			// Update GPU info
+			for (const [service, serviceGpuDevices] of Object.entries(gpuAllocated)) {
+				for (const gpuDevice of serviceGpuDevices) {
+					const updatedRows = await db.update(allocations)
+						.set({ usedBy: serviceUuidMap[service]! })
+						.where(eq(allocations.deviceId, gpuDevice))
+						.returning({ id: allocations.deviceId });
+
+					if (!(updatedRows.length === 1 && updatedRows[0]!.id === gpuDevice)) {
+						throw new Error(`Failed to update resource '${gpuDevice}' for service '${service}'`);
+					}
+				}
+			}
+
+			break;
+		}
+	}
+
+	if (!foundNode) {
+		throw new Error(`Insufficient resource for resources: ${JSON.stringify(privServiceResources)}`);
+	}
+
+	console.debug("ALLOCATE AUTO GPU:", "result:", JSON.stringify(result));
+	return result;
+}
+
+// TODO: pls move these function somewhere else someday
+export const recycleResource = async (nodeId: string, attributes: { [key: string]: string }) => {
+	const { "uvs-res-uuid": resUuid } = attributes;
+	console.debug("RECYCLE_RESOURCE:", "nodeId:", nodeId, "resUuid:", resUuid);
+	const updatedRows = await db.update(allocations)
+		.set({ usedBy: null })
+		.where(and(eq(allocations.usedBy, resUuid!), eq(allocations.nodeId, nodeId)))
+		.returning({ usedBy: allocations.usedBy });
+
+	if (!(updatedRows.length === 1 && updatedRows[0]!.usedBy === null)) {
+		throw new Error(`Failed to recycle resource with uuid='${resUuid}'`);
+	}
+}
+
 export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 	const writeStream = createWriteStream(logPath, { flags: "a" });
 	const { sourceType, appName, mounts, composeType, domains } = compose;
@@ -38,6 +282,15 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 				`docker network inspect ${compose.appName} >/dev/null 2>&1 || docker network create --attachable ${compose.appName}`,
 			);
 		}
+
+		const nodes = await getSwarmNodes(compose.serverId || undefined).then(
+			nodes => Promise.all(
+				(nodes ?? []).map(({ ID: nodeId }) => getNodeInfo(nodeId, compose.serverId || undefined))
+			)
+		);
+
+		const allocateRes = await allocateAutoGPU(compose, nodes);
+		await writeBackToCompose(compose, allocateRes);
 
 		const logContent = `
     App Name: ${appName}
@@ -81,7 +334,7 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 		if (compose.isolatedDeployment) {
 			await execAsync(
 				`docker network connect ${compose.appName} $(docker ps --filter "name=dokploy-traefik" -q) >/dev/null 2>&1`,
-			).catch(() => {});
+			).catch(() => { });
 		}
 
 		writeStream.write("Docker Compose Deployed: ✅");
